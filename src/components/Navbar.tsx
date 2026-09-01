@@ -23,6 +23,7 @@ interface NavbarProps {
   currentUser: UserProfile | null;
   onOpenLoginModal: () => void;
   onOpenSuperadminModal?: () => void;
+  onOpenSecretAdmin?: () => void;
   onOpenClusterModal?: () => void;
   onOpenAboutModal?: () => void;
   searchQuery: string;
@@ -38,6 +39,7 @@ export default function Navbar({
   currentUser,
   onOpenLoginModal,
   onOpenSuperadminModal,
+  onOpenSecretAdmin,
   onOpenClusterModal,
   onOpenAboutModal,
   searchQuery,
@@ -54,7 +56,7 @@ export default function Navbar({
       isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
     }`} id="main-header">
       
-      {/* Left Section: Logo & System Brand + Credit */}
+      {/* Left Section: Logo & System Brand + Secret Admin Trigger */}
       <div className="flex items-center space-x-3">
         {onToggleSidebar && (
           <button
@@ -69,13 +71,23 @@ export default function Navbar({
           </button>
         )}
 
-        <div className="bg-teal-500/15 border border-teal-500/30 p-2 rounded-xl text-teal-400 font-bold shrink-0 shadow-sm">
+        {/* Secret Trigger: Click on Logo Icon */}
+        <button
+          onClick={onOpenSecretAdmin}
+          className="bg-teal-500/15 border border-teal-500/30 p-2 rounded-xl text-teal-400 font-bold shrink-0 shadow-sm hover:bg-teal-500/25 active:scale-95 transition-all cursor-pointer focus:outline-none"
+          title="AnatoVerse Medical Engine"
+          id="navbar-brand-secret-trigger"
+          type="button"
+        >
           <Activity className="w-5 h-5" />
-        </div>
+        </button>
         
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-bold text-sm sm:text-base leading-tight flex items-center gap-1.5">
+            <h1 
+              onClick={onOpenSecretAdmin}
+              className="font-bold text-sm sm:text-base leading-tight flex items-center gap-1.5 cursor-pointer select-none"
+            >
               AnatoVerse
               <span className="text-[9px] bg-teal-500/20 text-teal-300 px-1.5 py-0.2 rounded font-mono border border-teal-500/30 hidden sm:inline-block">
                 PAAI 2019

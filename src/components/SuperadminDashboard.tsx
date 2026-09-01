@@ -21,7 +21,13 @@ import {
   GraduationCap,
   UserCheck,
   Check,
-  UserPlus
+  UserPlus,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 import { Organ, UserProfile, UserRole } from '../types';
 import { AnatomyDatabaseService, OFFICIAL_SUPERADMIN } from '../services/db';
@@ -35,6 +41,7 @@ interface SuperadminDashboardProps {
   onDeleteOrgan: (organId: string) => void;
   onResetMasterData: () => void;
   onImportMasterData: (jsonData: Organ[]) => void;
+  onLogout?: () => void;
   currentUser?: UserProfile | null;
   theme: 'dark' | 'light';
 }
@@ -47,6 +54,7 @@ export default function SuperadminDashboard({
   onDeleteOrgan,
   onResetMasterData,
   onImportMasterData,
+  onLogout,
   currentUser,
   theme
 }: SuperadminDashboardProps) {
@@ -63,11 +71,20 @@ export default function SuperadminDashboard({
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [userSuccessMessage, setUserSuccessMessage] = useState<string | null>(null);
+  const [showUserFormPassword, setShowUserFormPassword] = useState(false);
+
+  // Reset Password State
+  const [resettingUser, setResettingUser] = useState<UserProfile | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // New User Form State
   const [userForm, setUserForm] = useState<Partial<UserProfile>>({
     name: '',
     email: '',
+    password: '',
     role: 'MAHASISWA',
     institution: '',
     identifierNumber: '',
@@ -143,12 +160,14 @@ export default function SuperadminDashboard({
       id: userId,
       name: userForm.name.trim(),
       email: userForm.email.trim().toLowerCase(),
+      password: userForm.password?.trim() ? userForm.password.trim() : (editingUser?.password || 'anatomi2026'),
       role: (userForm.role as UserRole) || 'MAHASISWA',
       institution: userForm.institution?.trim() || '',
       identifierNumber: userForm.identifierNumber?.trim() || '',
       specialization: userForm.specialization?.trim() || '',
       dosenCode: userForm.dosenCode?.trim() || (userForm.role === 'DOSEN' ? `DOSEN-${Date.now().toString().slice(-4)}` : undefined),
-      createdAt: editingUser ? editingUser.createdAt : new Date().toISOString()
+      createdAt: editingUser ? editingUser.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     try {
@@ -161,6 +180,63 @@ export default function SuperadminDashboard({
     } catch (err) {
       console.error('Error saving user:', err);
       alert('Gagal menyimpan pengguna ke basis data.');
+    }
+  };
+
+  // Reset Password Action Handlers
+  const handleOpenResetPassword = (user: UserProfile) => {
+    setResettingUser(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setResetError(null);
+    setShowNewPassword(false);
+  };
+
+  const handleGenerateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
+    let generated = 'Anato';
+    for (let i = 0; i < 4; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    generated += '2026';
+    setNewPassword(generated);
+    setConfirmPassword(generated);
+    setShowNewPassword(true);
+    setResetError(null);
+  };
+
+  const handleSaveResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resettingUser) return;
+
+    if (!newPassword.trim()) {
+      setResetError('Kata sandi baru tidak boleh kosong.');
+      return;
+    }
+
+    if (newPassword.trim().length < 4) {
+      setResetError('Kata sandi minimal 4 karakter.');
+      return;
+    }
+
+    if (newPassword.trim() !== confirmPassword.trim()) {
+      setResetError('Konfirmasi kata sandi tidak cocok.');
+      return;
+    }
+
+    try {
+      const ok = await AnatomyDatabaseService.resetUserPassword(resettingUser.id, newPassword.trim());
+      if (ok) {
+        await refreshUsers();
+        setUserSuccessMessage(`Kata sandi untuk pengguna "${resettingUser.name}" (${resettingUser.email}) berhasil direset!`);
+        setResettingUser(null);
+        setTimeout(() => setUserSuccessMessage(null), 4000);
+      } else {
+        setResetError('Gagal mereset kata sandi pada basis data.');
+      }
+    } catch (err) {
+      console.error(err);
+      setResetError('Terjadi kesalahan sistem saat mereset kata sandi.');
     }
   };
 
@@ -318,6 +394,21 @@ export default function SuperadminDashboard({
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Tambah Organ</span>
+              </button>
+            )}
+
+            {onLogout && (
+              <button
+                onClick={() => {
+                  onLogout();
+                  onClose();
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-xs font-semibold transition-colors cursor-pointer"
+                title="Keluar dari Akses Superadmin ke Mode Publik/Guest"
+                id="superadmin-logout-btn"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Keluar Superadmin</span>
               </button>
             )}
 
@@ -585,10 +676,19 @@ export default function SuperadminDashboard({
 
                               <td className="px-4 py-2.5 text-right">
                                 <div className="flex items-center justify-end gap-1">
+                                  {/* Reset Password Button */}
+                                  <button
+                                    onClick={() => handleOpenResetPassword(user)}
+                                    className="p-1 rounded text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                                    title={`Reset Kata Sandi untuk ${user.name}`}
+                                  >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                  </button>
+
                                   <button
                                     onClick={() => {
                                       setEditingUser(user);
-                                      setUserForm({ ...user });
+                                      setUserForm({ ...user, password: '' });
                                       setIsAddingUser(true);
                                     }}
                                     className="p-1 rounded text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-colors cursor-pointer"
@@ -1084,6 +1184,32 @@ export default function SuperadminDashboard({
                 </div>
               </div>
 
+              <div>
+                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                  {editingUser ? 'Kata Sandi Baru (Opsional)' : 'Kata Sandi Akun *'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showUserFormPassword ? 'text' : 'password'}
+                    required={!editingUser}
+                    value={userForm.password || ''}
+                    onChange={(e) => setUserForm(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder={editingUser ? '•••••• (Kosongkan bila tidak ingin mengubah)' : 'Minimal 4 karakter (contoh: anatomi2026)'}
+                    className={`w-full pl-3 pr-8 py-1.5 rounded-lg border text-xs outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500' : 'bg-slate-50 border-slate-200 text-slate-800'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowUserFormPassword(!showUserFormPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    title={showUserFormPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                  >
+                    {showUserFormPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
               {userForm.role === 'DOSEN' && (
                 <div>
                   <label className="block text-[11px] font-medium text-amber-400 mb-1">
@@ -1117,6 +1243,143 @@ export default function SuperadminDashboard({
                   className="px-4 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   {editingUser ? 'Simpan Perubahan' : 'Buat Pengguna'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RESET PASSWORD PENGGUNA (SUPERADMIN) */}
+      {resettingUser && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fade-in" id="reset-password-modal">
+          <div className={`w-full max-w-md rounded-2xl p-5 shadow-2xl border ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 mb-4 border-slate-800 dark:border-slate-800 light:border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Reset Kata Sandi Pengguna</h3>
+                  <p className="text-[10px] text-slate-400">Otoritas Master Data Superadmin</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setResettingUser(null);
+                  setResetError(null);
+                }}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Target User Info Summary */}
+            <div className={`p-3 rounded-xl border mb-4 text-xs space-y-1.5 ${
+              isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Nama Pengguna:</span>
+                <span className="font-semibold">{resettingUser.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Email Akun:</span>
+                <span className="font-mono text-teal-400">{resettingUser.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Role / Hak Akses:</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
+                  {resettingUser.role}
+                </span>
+              </div>
+              {resettingUser.identifierNumber && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">NIM / NIDN / NIP:</span>
+                  <span className="font-mono text-slate-300">{resettingUser.identifierNumber}</span>
+                </div>
+              )}
+            </div>
+
+            {resetError && (
+              <div className="mb-3 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveResetPassword} className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-medium text-slate-400">
+                    Kata Sandi Baru *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateRandomPassword}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Buat Sandi Acak Kuat
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Masukkan kata sandi baru..."
+                    className={`w-full pl-3 pr-8 py-2 rounded-lg border text-xs outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-amber-500' : 'bg-slate-50 border-slate-200 text-slate-800'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    title={showNewPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                  Konfirmasi Kata Sandi Baru *
+                </label>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Ketik ulang kata sandi baru..."
+                  className={`w-full px-3 py-2 rounded-lg border text-xs outline-none ${
+                    isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-amber-500' : 'bg-slate-50 border-slate-200 text-slate-800'
+                  }`}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800 dark:border-slate-800 light:border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResettingUser(null);
+                    setResetError(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Simpan & Reset Password
                 </button>
               </div>
             </form>

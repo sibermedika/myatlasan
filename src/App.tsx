@@ -23,6 +23,7 @@ import InfoPanel from './components/InfoPanel';
 import AddOrganModal from './components/AddOrganModal';
 import AddPinModal from './components/AddPinModal';
 import LoginModal from './components/LoginModal';
+import SecretAdminModal from './components/SecretAdminModal';
 import SuperadminDashboard from './components/SuperadminDashboard';
 import InstitutionClusterView from './components/InstitutionClusterView';
 import AboutModal from './components/AboutModal';
@@ -92,6 +93,7 @@ export default function App() {
     localStorage.setItem('anatoverse_user_role', user.role);
     localStorage.setItem('anatoverse_user_profile', JSON.stringify(user));
     setShowLoginModal(false);
+    setShowSecretAdminModal(false);
 
     try {
       await AnatomyDatabaseService.saveUser(user);
@@ -112,6 +114,7 @@ export default function App() {
     setCurrentUser(null);
     localStorage.setItem('anatoverse_user_role', 'GUEST');
     localStorage.removeItem('anatoverse_user_profile');
+    setShowSuperadminDashboard(false);
   };
 
   // 4. Selection states
@@ -130,6 +133,7 @@ export default function App() {
 
   // 6. Modal States
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSecretAdminModal, setShowSecretAdminModal] = useState(false);
   const [showSuperadminDashboard, setShowSuperadminDashboard] = useState(false);
   const [showClusterModal, setShowClusterModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -351,6 +355,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenLoginModal={() => setShowLoginModal(true)}
         onOpenSuperadminModal={() => setShowSuperadminDashboard(true)}
+        onOpenSecretAdmin={() => setShowSecretAdminModal(true)}
         onOpenClusterModal={() => setShowClusterModal(true)}
         onOpenAboutModal={() => setShowAboutModal(true)}
         searchQuery={searchQuery}
@@ -375,7 +380,7 @@ export default function App() {
               setEditingOrgan(null);
               setShowAddOrganModal(true);
             }}
-            onOpenSuperadmin={() => setShowSuperadminDashboard(true)}
+            onOpenSuperadmin={role === 'SUPERADMIN' ? () => setShowSuperadminDashboard(true) : undefined}
             theme={theme}
           />
         </aside>
@@ -449,6 +454,15 @@ export default function App() {
         />
       )}
 
+      {/* SECRET MODAL: Secret Superadmin Login */}
+      {showSecretAdminModal && (
+        <SecretAdminModal
+          onClose={() => setShowSecretAdminModal(false)}
+          onLoginSuccess={handleLoginSuccess}
+          theme={theme}
+        />
+      )}
+
       {/* MODAL 2: Superadmin Master Data & Cluster Console */}
       {showSuperadminDashboard && (
         <SuperadminDashboard
@@ -465,6 +479,7 @@ export default function App() {
           onDeleteOrgan={handleDeleteOrgan}
           onResetMasterData={handleResetMasterData}
           onImportMasterData={handleImportMasterData}
+          onLogout={handleLogout}
           currentUser={currentUser}
           theme={theme}
         />
@@ -631,10 +646,10 @@ export default function App() {
                   setShowAddOrganModal(true);
                   setShowSidebarMobile(false);
                 }}
-                onOpenSuperadmin={() => {
+                onOpenSuperadmin={role === 'SUPERADMIN' ? () => {
                   setShowSuperadminDashboard(true);
                   setShowSidebarMobile(false);
-                }}
+                } : undefined}
                 theme={theme}
               />
             </div>

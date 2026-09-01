@@ -5,18 +5,19 @@ const DB_NAME = 'AnatoVerse_Anatomy_DB';
 const DB_VERSION = 3;
 
 // Production Superadmin Account (Official single administrator credential)
+export const DEFAULT_SUPERADMIN_PASSWORD = 'Sup3r@dm1n';
+
 export const OFFICIAL_SUPERADMIN: UserProfile = {
   id: 'superadmin-master',
-  name: 'Superadmin Sistem (Administrator)',
-  email: 'superadmin.anatomi@med.id',
+  name: 'Superadmin Sistem',
+  email: 'superadmin',
+  password: DEFAULT_SUPERADMIN_PASSWORD,
   role: 'SUPERADMIN',
-  identifierNumber: 'ADM-PAAI-001',
+  identifierNumber: 'superadmin',
   institution: 'Konsorsium Anatomi Nasional',
   specialization: 'Master Administrator Kurikulum Anatomi PAAI 2019',
   dosenCode: 'SUPERADMIN-MASTER'
 };
-
-export const DEFAULT_SUPERADMIN_PASSWORD = 'superadmin2026';
 
 // Standard Curriculum References (Standards !== Institutions)
 export const KNOWN_STANDARDS: string[] = [
@@ -352,9 +353,12 @@ export class AnatomyDatabaseService {
         const store = tx.objectStore('users');
         const request = store.getAll();
         request.onsuccess = () => {
-          const users = request.result || [];
-          if (!users.some((u: UserProfile) => u.role === 'SUPERADMIN')) {
-            users.push(OFFICIAL_SUPERADMIN);
+          const users: UserProfile[] = request.result || [];
+          const superadminIndex = users.findIndex((u: UserProfile) => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
+          if (superadminIndex === -1) {
+            users.unshift(OFFICIAL_SUPERADMIN);
+          } else if (!users[superadminIndex].password) {
+            users[superadminIndex].password = DEFAULT_SUPERADMIN_PASSWORD;
           }
           resolve(users);
         };
@@ -362,6 +366,28 @@ export class AnatomyDatabaseService {
       });
     } catch {
       return [OFFICIAL_SUPERADMIN];
+    }
+  }
+
+  /**
+   * Get a single user by ID
+   */
+  static async getUserById(userId: string): Promise<UserProfile | null> {
+    if (userId === OFFICIAL_SUPERADMIN.id) {
+      const all = await this.getAllUsers();
+      return all.find(u => u.id === userId) || OFFICIAL_SUPERADMIN;
+    }
+    try {
+      const db = await openIndexedDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('users', 'readonly');
+        const store = tx.objectStore('users');
+        const request = store.get(userId);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => resolve(null);
+      });
+    } catch {
+      return null;
     }
   }
 
@@ -380,6 +406,107 @@ export class AnatomyDatabaseService {
       });
     } catch (e) {
       console.error('Failed to save user in IndexedDB:', e);
+    }
+  }
+
+  /**
+   * Reset user password by userId (Superadmin Feature)
+   */
+  static async resetUserPassword(userId: string, newPassword: string): Promise<boolean> {
+    try {
+      const users = await this.getAllUsers();
+      const targetUser = users.find(u => u.id === userId);
+      if (!targetUser) {
+        return false;
+      }
+
+      const updatedUser: UserProfile = {
+        ...targetUser,
+        password: newPassword.trim(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await this.saveUser(updatedUser);
+      return true;
+    } catch (err) {
+      console.error('Failed to reset user password in IndexedDB:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Authenticate user with Email / Username / NIM / NIP and Password
+   */
+  static async authenticateUser(
+    identifierInput: string,
+    passwordInput: string
+  ): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
+    const cleanId = identifierInput.trim().toLowerCase();
+    const cleanPass = passwordInput.trim();
+
+    if (!cleanId) {
+      return { success: false, message: 'Silakan masukkan Email, NIP, NIM, atau Kode Pengguna.' };
+    }
+    if (!cleanPass) {
+      return { success: false, message: 'Silakan masukkan kata sandi.' };
+    }
+
+    try {
+      const users = await this.getAllUsers();
+
+      // Check Superadmin match
+      const isSuperadminIdentifier = 
+        cleanId === 'superadmin' ||
+        cleanId === OFFICIAL_SUPERADMIN.email.toLowerCase() ||
+        cleanId === 'superadmin.anatomi@med.id' ||
+        cleanId === OFFICIAL_SUPERADMIN.identifierNumber?.toLowerCase() ||
+        cleanId === OFFICIAL_SUPERADMIN.dosenCode?.toLowerCase();
+
+      if (isSuperadminIdentifier) {
+        const storedAdmin = users.find(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
+        const adminPass = storedAdmin?.password || DEFAULT_SUPERADMIN_PASSWORD;
+
+        if (cleanPass === DEFAULT_SUPERADMIN_PASSWORD || cleanPass === adminPass) {
+          const authUser = storedAdmin ? { ...storedAdmin, role: 'SUPERADMIN' as const } : OFFICIAL_SUPERADMIN;
+          return { success: true, user: authUser };
+        } else {
+          return { success: false, message: 'Kredensial tidak valid.' };
+        }
+      }
+
+      // Check regular users (Dosen, Mahasiswa, etc.) by email, identifierNumber (NIP/NIDN/NIM), dosenCode, or name
+      const matchedUser = users.find(u => {
+        const emailMatch = u.email.toLowerCase() === cleanId;
+        const idNumberMatch = u.identifierNumber && u.identifierNumber.toLowerCase() === cleanId;
+        const dosenCodeMatch = u.dosenCode && u.dosenCode.toLowerCase() === cleanId;
+        const nameMatch = u.name.toLowerCase() === cleanId;
+        return emailMatch || idNumberMatch || dosenCodeMatch || nameMatch;
+      });
+
+      if (!matchedUser) {
+        return { 
+          success: false, 
+          message: 'Akun dengan kredensial tersebut tidak ditemukan. Silakan periksa kembali atau lakukan pendaftaran.' 
+        };
+      }
+
+      // If user has password set, verify it
+      if (matchedUser.password) {
+        if (matchedUser.password === cleanPass) {
+          return { success: true, user: matchedUser };
+        } else {
+          return { success: false, message: 'Kata sandi tidak sesuai. Silakan hubungi Superadmin untuk reset kata sandi jika lupa.' };
+        }
+      }
+
+      // For legacy user without password, assign input password and authenticate
+      matchedUser.password = cleanPass;
+      await this.saveUser(matchedUser);
+      return { success: true, user: matchedUser };
+
+    } catch (err) {
+      console.error('Authentication error:', err);
+      return { success: false, message: 'Terjadi kesalahan sistem saat otentikasi.' };
     }
   }
 
@@ -566,6 +693,7 @@ export class AnatomyDatabaseService {
     sql += `    id VARCHAR(64) PRIMARY KEY,\n`;
     sql += `    name VARCHAR(255) NOT NULL,\n`;
     sql += `    email VARCHAR(255) UNIQUE NOT NULL,\n`;
+    sql += `    password VARCHAR(255),\n`;
     sql += `    role VARCHAR(32) NOT NULL,\n`;
     sql += `    identifier_number VARCHAR(128),\n`;
     sql += `    institution VARCHAR(255),\n`;
@@ -623,8 +751,8 @@ export class AnatomyDatabaseService {
 
     for (const u of allUsersList) {
       const escape = (str: string | undefined) => (str || '').replace(/'/g, "''");
-      sql += `INSERT OR REPLACE INTO users (id, name, email, role, identifier_number, institution, specialization, dosen_code)\n`;
-      sql += `VALUES ('${escape(u.id)}', '${escape(u.name)}', '${escape(u.email)}', '${escape(u.role)}', '${escape(u.identifierNumber)}', '${escape(u.institution)}', '${escape(u.specialization)}', '${escape(u.dosenCode)}');\n`;
+      sql += `INSERT OR REPLACE INTO users (id, name, email, password, role, identifier_number, institution, specialization, dosen_code)\n`;
+      sql += `VALUES ('${escape(u.id)}', '${escape(u.name)}', '${escape(u.email)}', '${escape(u.password)}', '${escape(u.role)}', '${escape(u.identifierNumber)}', '${escape(u.institution)}', '${escape(u.specialization)}', '${escape(u.dosenCode)}');\n`;
     }
     sql += `\n`;
 

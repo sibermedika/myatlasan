@@ -15,7 +15,9 @@ import {
   Building2,
   BookOpen,
   UserPlus,
-  LogIn
+  LogIn,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { UserRole, UserProfile } from '../types';
 import { OFFICIAL_SUPERADMIN, DEFAULT_SUPERADMIN_PASSWORD, KNOWN_INSTITUTIONS, AnatomyDatabaseService } from '../services/db';
@@ -45,6 +47,7 @@ export default function LoginModal({
   // Form Fields
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullNameInput, setFullNameInput] = useState('');
   const [identifierInput, setIdentifierInput] = useState(''); // NIM / NIDN / NIP
   const [institutionInput, setInstitutionInput] = useState('Universitas Islam Sultan Agung (FK UNISSULA)');
@@ -74,8 +77,13 @@ export default function LoginModal({
   const handleSuperadminQuickLogin = async () => {
     setIsSubmitting(true);
     try {
-      await AnatomyDatabaseService.saveUser(OFFICIAL_SUPERADMIN);
-      onLoginSuccess(OFFICIAL_SUPERADMIN);
+      const auth = await AnatomyDatabaseService.authenticateUser(OFFICIAL_SUPERADMIN.email, DEFAULT_SUPERADMIN_PASSWORD);
+      if (auth.success && auth.user) {
+        onLoginSuccess(auth.user);
+      } else {
+        await AnatomyDatabaseService.saveUser(OFFICIAL_SUPERADMIN);
+        onLoginSuccess(OFFICIAL_SUPERADMIN);
+      }
     } catch (e) {
       console.error(e);
       onLoginSuccess(OFFICIAL_SUPERADMIN);
@@ -102,7 +110,7 @@ export default function LoginModal({
     setErrorMessage('');
 
     if (!emailInput.trim()) {
-      setErrorMessage('Silakan masukkan alamat email yang valid.');
+      setErrorMessage('Silakan masukkan alamat Email, NIM, NIDN, atau NIP.');
       return;
     }
 
@@ -114,27 +122,38 @@ export default function LoginModal({
     setIsSubmitting(true);
 
     try {
-      // 1. Superadmin verification
-      if (selectedRoleTab === 'SUPERADMIN') {
-        if (
-          (emailInput.trim().toLowerCase() === OFFICIAL_SUPERADMIN.email.toLowerCase() || emailInput.trim().toLowerCase() === 'superadmin') &&
-          passwordInput.trim() === DEFAULT_SUPERADMIN_PASSWORD
-        ) {
-          await AnatomyDatabaseService.saveUser(OFFICIAL_SUPERADMIN);
-          onLoginSuccess(OFFICIAL_SUPERADMIN);
-          return;
-        } else {
-          setErrorMessage('Kredensial Superadmin tidak cocok. Silakan periksa email/password.');
+      // 1. LOGIN MODE: Validate against database
+      if (authMode === 'LOGIN') {
+        const authResult = await AnatomyDatabaseService.authenticateUser(emailInput, passwordInput);
+        if (!authResult.success || !authResult.user) {
+          setErrorMessage(authResult.message || 'Kredensial login tidak cocok.');
           setIsSubmitting(false);
           return;
         }
+
+        // Verify role consistency or adjust active role
+        onLoginSuccess(authResult.user);
+        return;
       }
 
-      // 2. Dosen / Mahasiswa handling
+      // 2. REGISTER MODE: Create new account
       const finalInstitution = customInstitution.trim() || institutionInput.trim() || 'Koleksi Mandiri / Terbuka';
 
       if (selectedRoleTab === 'DOSEN' && !finalInstitution) {
         setErrorMessage('Asal Institusi / Universitas / Rumah Sakit Dosen wajib diisi.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check if user with same email or identifier already exists
+      const existingUsers = await AnatomyDatabaseService.getAllUsers();
+      const duplicate = existingUsers.find(
+        u => u.email.toLowerCase() === emailInput.trim().toLowerCase() ||
+             (identifierInput.trim() && u.identifierNumber?.toLowerCase() === identifierInput.trim().toLowerCase())
+      );
+
+      if (duplicate) {
+        setErrorMessage(`Akun dengan email/identitas tersebut sudah terdaftar (${duplicate.name}). Silakan gunakan menu "Masuk".`);
         setIsSubmitting(false);
         return;
       }
@@ -150,6 +169,7 @@ export default function LoginModal({
         id: `usr-${Date.now()}`,
         name: fullNameInput.trim() || (selectedRoleTab === 'DOSEN' ? `Dosen ${emailInput.split('@')[0]}` : `Mahasiswa ${emailInput.split('@')[0]}`),
         email: emailInput.trim().toLowerCase(),
+        password: passwordInput.trim(), // Save password to user object in IndexedDB
         role: selectedRoleTab,
         identifierNumber: identifierInput.trim() || (selectedRoleTab === 'DOSEN' ? 'NIDN/NIP Terverifikasi' : 'NIM Mahasiswa'),
         institution: finalInstitution,
@@ -163,7 +183,7 @@ export default function LoginModal({
       onLoginSuccess(userProfile);
     } catch (err) {
       console.error(err);
-      setErrorMessage('Terjadi kendala saat memproses otentikasi.');
+      setErrorMessage('Terjadi kendala saat memproses otentikasi akun.');
     } finally {
       setIsSubmitting(false);
     }
@@ -229,8 +249,8 @@ export default function LoginModal({
           </div>
         )}
 
-        {/* Role Tab Selector */}
-        <div className={`grid grid-cols-4 border-b text-xs font-bold ${
+        {/* Role Tab Selector (Public: Dosen, Mahasiswa, Tamu) */}
+        <div className={`grid grid-cols-3 border-b text-xs font-bold ${
           isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-100 border-slate-200'
         }`}>
           <button
@@ -274,20 +294,6 @@ export default function LoginModal({
             <Users className="w-4 h-4" />
             <span className="text-[11px]">Tamu (Free)</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => handleSwitchRoleTab('SUPERADMIN')}
-            className={`py-3 px-2 flex flex-col items-center gap-1 border-b-2 transition-all cursor-pointer ${
-              selectedRoleTab === 'SUPERADMIN'
-                ? 'border-rose-500 text-rose-400 bg-rose-500/10'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-            id="tab-role-superadmin"
-          >
-            <Crown className="w-4 h-4" />
-            <span className="text-[11px]">Superadmin</span>
-          </button>
         </div>
 
         {/* Tab Content Body */}
@@ -295,9 +301,7 @@ export default function LoginModal({
           
           {/* Role Benefit Card */}
           <div className={`rounded-xl p-3.5 border ${
-            selectedRoleTab === 'SUPERADMIN'
-              ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-              : selectedRoleTab === 'DOSEN'
+            selectedRoleTab === 'DOSEN'
               ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
               : selectedRoleTab === 'MAHASISWA'
               ? 'bg-teal-500/10 border-teal-500/30 text-teal-300'
@@ -306,14 +310,12 @@ export default function LoginModal({
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span className="text-xs font-bold">
-                {selectedRoleTab === 'SUPERADMIN' && 'Superadmin: Manajemen Master Data & Cluster Database'}
                 {selectedRoleTab === 'DOSEN' && 'Dosen Kontributor: Upload Objek 2D/3D & Pengelompokan Asal Institusi'}
                 {selectedRoleTab === 'MAHASISWA' && 'Mahasiswa Kedokteran: Akses Kurikulum Lengkap 87+ Topik'}
                 {selectedRoleTab === 'GUEST' && 'Mode Tamu (Guest): Akses Organ Pengantar & Jantung Gratis'}
               </span>
             </div>
             <p className="text-[11px] leading-relaxed opacity-90">
-              {selectedRoleTab === 'SUPERADMIN' && 'Akses penuh manajemen kurikulum PAAI 2019, ekspor database SQLite/MySQL, dan monitoring cluster institusi.'}
               {selectedRoleTab === 'DOSEN' && 'Dosen dapat mengunggah file 2D (JPG/PNG) & 3D (GLB/OBJ/STL/FBX), menambahkan sub-kategori unik dengan Kode Dosen, dan mencantumkan asal institusi/universitas.'}
               {selectedRoleTab === 'MAHASISWA' && 'Eksplorasi interaktif seluruh sistem anatomi, pin spasial 2D/3D, vaskularisasi, inervasi, dan korelasi klinis.'}
               {selectedRoleTab === 'GUEST' && 'Akses publik tanpa login untuk sampel organ bebas. Masuk akun untuk membuka seluruh materi.'}
@@ -335,34 +337,6 @@ export default function LoginModal({
                 <Users className="w-4 h-4" />
                 Lanjutkan Sebagai Tamu Non-Login
               </button>
-            </div>
-          )}
-
-          {/* Superadmin Official Credential Quick Action */}
-          {selectedRoleTab === 'SUPERADMIN' && (
-            <div className={`p-4 rounded-xl border space-y-3 ${
-              isDark ? 'bg-slate-950 border-rose-500/30' : 'bg-rose-50/50 border-rose-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-rose-400">
-                    Akun Resmi Superadmin (Master Admin)
-                  </h4>
-                  <p className="text-[10px] text-slate-400">
-                    {OFFICIAL_SUPERADMIN.email} • {OFFICIAL_SUPERADMIN.identifierNumber}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSuperadminQuickLogin}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 text-white hover:bg-rose-400 shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                  id="btn-fast-superadmin-login"
-                >
-                  <Crown className="w-3.5 h-3.5" />
-                  Masuk Superadmin
-                </button>
-              </div>
             </div>
           )}
 
@@ -471,16 +445,16 @@ export default function LoginModal({
                 </div>
               )}
 
-              {/* Email & Password */}
+              {/* Email / Identifier & Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                    Alamat Email Kampus / Pribadi *
+                    {authMode === 'LOGIN' ? 'Email / NIM / NIDN / NIP *' : 'Alamat Email Kampus / Pribadi *'}
                   </label>
                   <input
-                    type="email"
+                    type={authMode === 'LOGIN' ? 'text' : 'email'}
                     required
-                    placeholder="nama@fk.unissula.ac.id"
+                    placeholder={authMode === 'LOGIN' ? 'nama@fk.unissula.ac.id / NIM / NIDN' : 'nama@fk.unissula.ac.id'}
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
                     className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-teal-500 ${
@@ -493,16 +467,26 @@ export default function LoginModal({
                   <label className="block text-[11px] font-bold text-slate-400 mb-1">
                     Kata Sandi *
                   </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-teal-500 ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      className={`w-full rounded-lg border pl-3 pr-9 py-2 text-xs focus:outline-none focus:border-teal-500 ${
+                        isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                      title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 

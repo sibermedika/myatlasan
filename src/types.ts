@@ -64,13 +64,15 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  password?: string; // Kata sandi otentikasi akun pengguna
   role: UserRole;
-  identifierNumber?: string; // NIM / NIDN / NIP
+  identifierNumber?: string; // NIM / NIDN / NIP / Username
   institution?: string; // Asal Institusi Dosen / Mahasiswa (Wajib untuk Dosen)
   specialization?: string;
   dosenCode?: string;
   avatar?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SubCategoryMeta {

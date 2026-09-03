@@ -512,7 +512,7 @@ export default function LoginModal({
                   id="submit-auth-btn"
                 >
                   {authMode === 'LOGIN' ? <LogIn className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                  {authMode === 'LOGIN' ? `Masuk Sebagai ${selectedRoleTab}` : `Daftar & Masuk ${selectedRoleTab}`}
+                  {authMode === 'LOGIN' ? 'Masuk ke Akun' : `Daftar & Masuk ${selectedRoleTab}`}
                 </button>
               </div>
             </form>

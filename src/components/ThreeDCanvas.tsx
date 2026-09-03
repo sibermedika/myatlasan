@@ -5,10 +5,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import * as fflate from 'fflate';
 
-import { Organ, Pin, UserRole, Model3DPreset } from '../types';
+import { Organ, Pin, UserRole, Model3DPreset, StoredBundleFile } from '../types';
 import { AnatomyDatabaseService } from '../services/db';
 import { 
   RotateCw, 
@@ -490,18 +491,89 @@ export default function ThreeDCanvas({
     });
   }, [wireframe]);
 
-  // Load 3D model asynchronously based on format (.glb, .gltf, .fbx, .obj, .stl)
-  const loadCustom3DModel = useCallback(async (sourceUrl: string, format: string): Promise<THREE.Group> => {
+  // Load 3D model asynchronously based on format (.glb, .gltf, .fbx, .obj, .stl, folder/bundles)
+  // Supports string URL (Blob URL, Data URL, HTTP), Blob, or ArrayBuffer
+  const loadCustom3DModel = useCallback(async (
+    source: string | Blob | ArrayBuffer, 
+    format: string,
+    bundleFiles?: StoredBundleFile[]
+  ): Promise<THREE.Group> => {
     const normalizedFormat = (format || 'glb').toLowerCase();
     const group = new THREE.Group();
 
-    if (normalizedFormat === 'glb' || normalizedFormat === 'gltf' || sourceUrl.endsWith('.glb') || sourceUrl.endsWith('.gltf')) {
+    // ==========================================
+    // 1. GLTF / GLB Format
+    // ==========================================
+    if (
+      normalizedFormat === 'glb' || 
+      normalizedFormat === 'gltf' || 
+      (typeof source === 'string' && (source.endsWith('.glb') || source.endsWith('.gltf')))
+    ) {
       const loader = new GLTFLoader();
       loader.setDRACOLoader(getDracoLoader());
 
+      if (source instanceof ArrayBuffer) {
+        return new Promise<THREE.Group>((resolve, reject) => {
+          loader.parse(
+            source,
+            '',
+            (gltf) => {
+              const loadedScene = gltf.scene || gltf.scenes[0];
+              normalizeAndCenterModel(loadedScene);
+              group.add(loadedScene);
+              resolve(group);
+            },
+            (error: any) => {
+              reject(new Error(`Gagal mem-parse GLB ArrayBuffer: ${error?.message || String(error)}`));
+            }
+          );
+        });
+      }
+
+      if (source instanceof Blob) {
+        let objectUrl: string | null = null;
+        try {
+          objectUrl = URL.createObjectURL(source);
+          return await new Promise<THREE.Group>((resolve, reject) => {
+            loader.load(
+              objectUrl!,
+              (gltf) => {
+                const loadedScene = gltf.scene || gltf.scenes[0];
+                normalizeAndCenterModel(loadedScene);
+                group.add(loadedScene);
+                resolve(group);
+              },
+              (xhr) => {
+                if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+              },
+              (error: any) => reject(error)
+            );
+          });
+        } catch (err: any) {
+          // Fallback to ArrayBuffer parsing
+          const arrayBuffer = await source.arrayBuffer();
+          return new Promise<THREE.Group>((resolve, reject) => {
+            loader.parse(
+              arrayBuffer,
+              '',
+              (gltf) => {
+                const loadedScene = gltf.scene || gltf.scenes[0];
+                normalizeAndCenterModel(loadedScene);
+                group.add(loadedScene);
+                resolve(group);
+              },
+              (error: any) => reject(new Error(`Gagal membaca GLTF/GLB Blob: ${error?.message || String(error)}`))
+            );
+          });
+        } finally {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+        }
+      }
+
+      // String URL
       return new Promise<THREE.Group>((resolve, reject) => {
         loader.load(
-          sourceUrl,
+          source,
           (gltf) => {
             const loadedScene = gltf.scene || gltf.scenes[0];
             normalizeAndCenterModel(loadedScene);
@@ -509,86 +581,403 @@ export default function ThreeDCanvas({
             resolve(group);
           },
           (xhr) => {
-            if (xhr.total > 0) {
-              setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
-            }
+            if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
           },
           (error: any) => {
             reject(new Error(`Gagal membaca GLTF/GLB: ${error?.message || String(error) || 'Format tidak valid'}`));
           }
         );
       });
-    } else if (normalizedFormat === 'fbx' || sourceUrl.endsWith('.fbx')) {
+
+    // ==========================================
+    // 2. FBX Format (Robust Blob, ArrayBuffer & Data URL)
+    // ==========================================
+    } else if (
+      normalizedFormat === 'fbx' || 
+      (typeof source === 'string' && (source.endsWith('.fbx') || source.includes('format=fbx')))
+    ) {
       const fbxLoader = new FBXLoader();
 
-      return new Promise<THREE.Group>((resolve, reject) => {
-        fbxLoader.load(
-          sourceUrl,
-          (fbx) => {
-            normalizeAndCenterModel(fbx);
-            group.add(fbx);
-            resolve(group);
-          },
-          (xhr) => {
-            if (xhr.total > 0) {
-              setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
-            }
-          },
-          (error: any) => {
-            reject(new Error(`Gagal membaca FBX: ${error?.message || String(error) || 'Format FBX tidak valid'}`));
+      // Case 2A: Direct ArrayBuffer
+      if (source instanceof ArrayBuffer) {
+        try {
+          const loadedFbx = fbxLoader.parse(source, '');
+          normalizeAndCenterModel(loadedFbx);
+          group.add(loadedFbx);
+          return group;
+        } catch (err: any) {
+          console.error('FBXLoader.parse ArrayBuffer error:', err);
+          throw new Error(`Gagal mem-parse binary FBX (ArrayBuffer): ${err?.message || String(err)}`);
+        }
+      }
+
+      // Case 2B: Blob Data (Create dynamic Blob URL + memory cleanup & fallback ArrayBuffer)
+      if (source instanceof Blob) {
+        let objectUrl: string | null = null;
+        try {
+          objectUrl = URL.createObjectURL(source);
+          const loadedFbx = await new Promise<THREE.Group>((resolve, reject) => {
+            fbxLoader.load(
+              objectUrl!,
+              (fbx) => {
+                normalizeAndCenterModel(fbx);
+                group.add(fbx);
+                resolve(group);
+              },
+              (xhr) => {
+                if (xhr.total > 0) {
+                  setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+                }
+              },
+              (error: any) => {
+                console.warn('FBXLoader.load via Blob URL failed, will try ArrayBuffer fallback:', error);
+                reject(error);
+              }
+            );
+          });
+          return loadedFbx;
+        } catch (loadErr: any) {
+          // Robust Fallback: Convert Blob to ArrayBuffer and use fbxLoader.parse()
+          try {
+            const arrayBuffer = await source.arrayBuffer();
+            const loadedFbx = fbxLoader.parse(arrayBuffer, '');
+            normalizeAndCenterModel(loadedFbx);
+            group.add(loadedFbx);
+            return group;
+          } catch (parseFallbackErr: any) {
+            console.error('FBX parse fallback error:', parseFallbackErr);
+            throw new Error(`Gagal membaca berkas FBX: ${parseFallbackErr?.message || loadErr?.message || 'Format binary FBX korup atau tidak didukung'}`);
           }
+        } finally {
+          // Mandatory Memory Cleanup
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+          }
+        }
+      }
+
+      // Case 2C: String URL (Data URL, Blob URL, or HTTP URL)
+      if (typeof source === 'string') {
+        // Base64 Data URL: decode directly to ArrayBuffer to avoid "Failed to fetch"
+        if (source.startsWith('data:')) {
+          try {
+            const base64Index = source.indexOf(',');
+            const base64Content = base64Index !== -1 ? source.substring(base64Index + 1) : source;
+            const binaryStr = atob(base64Content);
+            const len = binaryStr.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryStr.charCodeAt(i);
+            }
+            const loadedFbx = fbxLoader.parse(bytes.buffer, '');
+            normalizeAndCenterModel(loadedFbx);
+            group.add(loadedFbx);
+            return group;
+          } catch (dataUrlErr: any) {
+            console.error('FBX base64 parse error:', dataUrlErr);
+            throw new Error(`Gagal mem-parse FBX Data URL: ${dataUrlErr?.message || 'Data base64 tidak valid'}`);
+          }
+        }
+
+        // Direct Load via URL
+        try {
+          const loadedFbx = await new Promise<THREE.Group>((resolve, reject) => {
+            fbxLoader.load(
+              source,
+              (fbx) => {
+                normalizeAndCenterModel(fbx);
+                group.add(fbx);
+                resolve(group);
+              },
+              (xhr) => {
+                if (xhr.total > 0) {
+                  setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+                }
+              },
+              (error: any) => {
+                reject(error);
+              }
+            );
+          });
+          return loadedFbx;
+        } catch (loadErr: any) {
+          console.warn('Direct FBXLoader.load failed, attempting fetch to ArrayBuffer:', loadErr);
+          try {
+            const response = await fetch(source);
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const arrayBuffer = await response.arrayBuffer();
+            const loadedFbx = fbxLoader.parse(arrayBuffer, '');
+            normalizeAndCenterModel(loadedFbx);
+            group.add(loadedFbx);
+            return group;
+          } catch (fetchParseErr: any) {
+            console.warn('FBX fetch/parse failed, checking emergency recovery from IndexedDB:', fetchParseErr);
+            // Emergency persistence recovery: Check if the FBX binary blob exists in IndexedDB media_files
+            try {
+              const recovered = await AnatomyDatabaseService.findMatchingStored3DRecord(organ);
+              if (recovered && recovered.blob) {
+                const arrayBuffer = await recovered.blob.arrayBuffer();
+                const loadedFbx = fbxLoader.parse(arrayBuffer, '');
+                normalizeAndCenterModel(loadedFbx);
+                group.add(loadedFbx);
+                return group;
+              }
+            } catch (recoveryErr) {
+              console.error('IndexedDB emergency FBX recovery failed:', recoveryErr);
+            }
+            throw new Error(`Gagal membaca berkas FBX: ${fetchParseErr?.message || loadErr?.message || 'Gagal memuat berkas FBX'}`);
+          }
+        }
+      }
+
+      throw new Error('Format atau sumber berkas FBX tidak valid.');
+
+    // ==========================================
+    // 3. OBJ Format (Single File or OBJ Folder / Bundle with MTL & Textures)
+    // ==========================================
+    } else if (
+      normalizedFormat === 'obj' || 
+      normalizedFormat === 'obj_bundle' || 
+      (typeof source === 'string' && source.endsWith('.obj'))
+    ) {
+      // Check if we have bundleFiles (MTL and/or texture image files from folder or zip)
+      if (bundleFiles && bundleFiles.length > 0) {
+        const mtlFile = bundleFiles.find(f => f.name.toLowerCase().endsWith('.mtl'));
+        const textureFiles = bundleFiles.filter(f => 
+          !f.name.toLowerCase().endsWith('.obj') && 
+          !f.name.toLowerCase().endsWith('.mtl')
         );
-      });
-    } else if (normalizedFormat === 'obj' || sourceUrl.endsWith('.obj')) {
+
+        const textureUrls: { [key: string]: string } = {};
+        const localCreatedUrls: string[] = [];
+
+        // Build texture filename lookup map
+        for (const tFile of textureFiles) {
+          const url = URL.createObjectURL(tFile.blob);
+          localCreatedUrls.push(url);
+          const rawName = tFile.name.toLowerCase().replace(/\\/g, '/');
+          const baseName = rawName.split('/').pop() || rawName;
+          textureUrls[rawName] = url;
+          textureUrls[baseName] = url;
+        }
+
+        const manager = new THREE.LoadingManager();
+        manager.setURLModifier((url: string) => {
+          const clean = url.toLowerCase().replace(/\\/g, '/');
+          const base = clean.split('/').pop() || clean;
+          if (textureUrls[base]) return textureUrls[base];
+          if (textureUrls[clean]) return textureUrls[clean];
+          return url;
+        });
+
+        // Read OBJ text content
+        let objText = '';
+        if (source instanceof Blob) {
+          objText = await source.text();
+        } else if (typeof source === 'string') {
+          if (!source.startsWith('http') && !source.startsWith('blob:') && source.includes('v ')) {
+            objText = source;
+          } else {
+            const res = await fetch(source);
+            objText = await res.text();
+          }
+        } else if (source instanceof ArrayBuffer) {
+          const decoder = new TextDecoder('utf-8');
+          objText = decoder.decode(source);
+        }
+
+        let loadedObj: THREE.Group;
+
+        if (mtlFile) {
+          try {
+            const mtlText = await mtlFile.blob.text();
+            const mtlLoader = new MTLLoader(manager);
+            const materialsCreator = mtlLoader.parse(mtlText, '');
+            materialsCreator.preload();
+
+            const objLoader = new OBJLoader(manager);
+            objLoader.setMaterials(materialsCreator);
+            loadedObj = objLoader.parse(objText);
+          } catch (mtlErr) {
+            console.warn('MTLLoader parse failed, falling back to basic OBJLoader:', mtlErr);
+            const objLoader = new OBJLoader(manager);
+            loadedObj = objLoader.parse(objText);
+          }
+        } else {
+          const objLoader = new OBJLoader(manager);
+          loadedObj = objLoader.parse(objText);
+
+          // If texture files exist without MTL, apply texture map directly to all meshes
+          if (textureFiles.length > 0) {
+            const primaryTex = textureFiles[0];
+            const baseName = primaryTex.name.toLowerCase().split('/').pop() || '';
+            const texUrl = textureUrls[baseName] || URL.createObjectURL(primaryTex.blob);
+            const textureLoader = new THREE.TextureLoader(manager);
+            textureLoader.load(texUrl, (tex) => {
+              tex.colorSpace = THREE.SRGBColorSpace;
+              loadedObj.traverse((child) => {
+                if ((child as THREE.Mesh).isMesh) {
+                  const mesh = child as THREE.Mesh;
+                  mesh.material = new THREE.MeshStandardMaterial({
+                    map: tex,
+                    roughness: 0.4,
+                    metalness: 0.1,
+                    side: THREE.DoubleSide
+                  });
+                }
+              });
+            });
+          }
+        }
+
+        normalizeAndCenterModel(loadedObj);
+        group.add(loadedObj);
+        return group;
+      }
+
+      // Standard Single File OBJ (No sidecars)
       const objLoader = new OBJLoader();
 
-      return new Promise<THREE.Group>((resolve, reject) => {
-        objLoader.load(
-          sourceUrl,
-          (obj) => {
+      if (source instanceof Blob) {
+        let objectUrl: string | null = null;
+        try {
+          objectUrl = URL.createObjectURL(source);
+          return await new Promise<THREE.Group>((resolve, reject) => {
+            objLoader.load(
+              objectUrl!,
+              (obj) => {
+                normalizeAndCenterModel(obj);
+                group.add(obj);
+                resolve(group);
+              },
+              (xhr) => {
+                if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+              },
+              (error: any) => reject(error)
+            );
+          });
+        } catch (err: any) {
+          const text = await source.text();
+          const obj = objLoader.parse(text);
+          normalizeAndCenterModel(obj);
+          group.add(obj);
+          return group;
+        } finally {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+        }
+      }
+
+      if (typeof source === 'string') {
+        try {
+          return await new Promise<THREE.Group>((resolve, reject) => {
+            objLoader.load(
+              source,
+              (obj) => {
+                normalizeAndCenterModel(obj);
+                group.add(obj);
+                resolve(group);
+              },
+              (xhr) => {
+                if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+              },
+              (error: any) => {
+                reject(new Error(`Gagal membaca OBJ: ${error?.message || String(error) || 'Format OBJ tidak valid'}`));
+              }
+            );
+          });
+        } catch (loadErr: any) {
+          console.warn('OBJLoader.load failed, attempting fetch or IndexedDB recovery:', loadErr);
+          try {
+            const res = await fetch(source);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const text = await res.text();
+            const obj = objLoader.parse(text);
             normalizeAndCenterModel(obj);
             group.add(obj);
-            resolve(group);
-          },
-          (xhr) => {
-            if (xhr.total > 0) {
-              setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+            return group;
+          } catch (fetchErr) {
+            const recovered = await AnatomyDatabaseService.findMatchingStored3DRecord(organ);
+            if (recovered && recovered.blob) {
+              const text = await recovered.blob.text();
+              const obj = objLoader.parse(text);
+              normalizeAndCenterModel(obj);
+              group.add(obj);
+              return group;
             }
-          },
-          (error: any) => {
-            reject(new Error(`Gagal membaca OBJ: ${error?.message || String(error) || 'Format OBJ tidak valid'}`));
+            throw new Error(`Gagal membaca berkas OBJ: ${loadErr?.message || 'Format OBJ tidak valid'}`);
           }
-        );
-      });
-    } else if (normalizedFormat === 'stl' || sourceUrl.endsWith('.stl')) {
+        }
+      }
+
+      throw new Error('Sumber berkas OBJ tidak valid.');
+
+    // ==========================================
+    // 4. STL Format
+    // ==========================================
+    } else if (
+      normalizedFormat === 'stl' || 
+      (typeof source === 'string' && source.endsWith('.stl'))
+    ) {
       const stlLoader = new STLLoader();
 
-      return new Promise<THREE.Group>((resolve, reject) => {
-        stlLoader.load(
-          sourceUrl,
-          (geometry) => {
-            geometry.computeVertexNormals();
-            const mat = new THREE.MeshStandardMaterial({
-              color: 0x14b8a6,
-              roughness: 0.35,
-              metalness: 0.1,
-              wireframe
-            });
-            const mesh = new THREE.Mesh(geometry, mat);
-            normalizeAndCenterModel(mesh);
-            group.add(mesh);
-            resolve(group);
-          },
-          (xhr) => {
-            if (xhr.total > 0) {
-              setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+      const createStlMesh = (geometry: THREE.BufferGeometry) => {
+        geometry.computeVertexNormals();
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x14b8a6,
+          roughness: 0.35,
+          metalness: 0.1,
+          wireframe
+        });
+        const mesh = new THREE.Mesh(geometry, mat);
+        normalizeAndCenterModel(mesh);
+        group.add(mesh);
+        return group;
+      };
+
+      if (source instanceof ArrayBuffer) {
+        const geometry = stlLoader.parse(source);
+        return createStlMesh(geometry);
+      }
+
+      if (source instanceof Blob) {
+        let objectUrl: string | null = null;
+        try {
+          objectUrl = URL.createObjectURL(source);
+          return await new Promise<THREE.Group>((resolve, reject) => {
+            stlLoader.load(
+              objectUrl!,
+              (geometry) => resolve(createStlMesh(geometry)),
+              (xhr) => {
+                if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+              },
+              (error: any) => reject(error)
+            );
+          });
+        } catch (err: any) {
+          const arrayBuffer = await source.arrayBuffer();
+          const geometry = stlLoader.parse(arrayBuffer);
+          return createStlMesh(geometry);
+        } finally {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+        }
+      }
+
+      if (typeof source === 'string') {
+        return new Promise<THREE.Group>((resolve, reject) => {
+          stlLoader.load(
+            source,
+            (geometry) => resolve(createStlMesh(geometry)),
+            (xhr) => {
+              if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+            },
+            (error: any) => {
+              reject(new Error(`Gagal membaca STL: ${error?.message || String(error) || 'Format STL tidak valid'}`));
             }
-          },
-          (error: any) => {
-            reject(new Error(`Gagal membaca STL: ${error?.message || String(error) || 'Format STL tidak valid'}`));
-          }
-        );
-      });
+          );
+        });
+      }
+
+      throw new Error('Sumber berkas STL tidak valid.');
     } else {
       throw new Error(`Format 3D '${normalizedFormat}' belum didukung.`);
     }
@@ -755,19 +1144,28 @@ export default function ThreeDCanvas({
       setLoadProgress(0);
 
       try {
-        const sourceUrl = await AnatomyDatabaseService.resolve3DModelSource(organ);
+        const modelData = await AnatomyDatabaseService.resolve3DModelData(organ);
         
         let loadedModel: THREE.Group;
 
-        if (sourceUrl && (sourceUrl.startsWith('blob:') || sourceUrl.startsWith('http') || sourceUrl.startsWith('data:'))) {
+        if (modelData && (modelData.blob || modelData.sourceUrl)) {
           // Attempt to load the real 3D file (.glb, .gltf, .fbx, .obj, .stl)
-          const format = organ.model3dFormat || 'glb';
-          loadedModel = await loadCustom3DModel(sourceUrl, format);
+          const format = modelData.format || organ.model3dFormat || 'glb';
+          const source = modelData.blob || modelData.sourceUrl!;
+          loadedModel = await loadCustom3DModel(source, format, modelData.bundleFiles);
           setIsUsingProceduralFallback(false);
         } else {
-          // Use Procedural Anatomical Preset
-          loadedModel = createProceduralAnatomicalMesh(organ.model3dType, organ.id);
-          setIsUsingProceduralFallback(false);
+          // Fallback to legacy URL resolution if available
+          const sourceUrl = await AnatomyDatabaseService.resolve3DModelSource(organ);
+          if (sourceUrl && (sourceUrl.startsWith('blob:') || sourceUrl.startsWith('http') || sourceUrl.startsWith('data:'))) {
+            const format = organ.model3dFormat || 'glb';
+            loadedModel = await loadCustom3DModel(sourceUrl, format);
+            setIsUsingProceduralFallback(false);
+          } else {
+            // Use Procedural Anatomical Preset
+            loadedModel = createProceduralAnatomicalMesh(organ.model3dType, organ.id);
+            setIsUsingProceduralFallback(false);
+          }
         }
 
         if (!isMounted) {

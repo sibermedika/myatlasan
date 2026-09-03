@@ -12,7 +12,7 @@ export interface Pin {
 
 export type MediaType = '2d_image' | '3d_model' | '3d_embed';
 export type Model3DPreset = 'heart' | 'brain' | 'lungs' | 'skull' | 'body' | 'custom_upload';
-export type Supported3DFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'fbx';
+export type Supported3DFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'fbx' | 'obj_bundle';
 export type Supported2DFormat = 'jpg' | 'jpeg' | 'png' | 'webp';
 
 export interface OrganMediaItem {
@@ -84,15 +84,25 @@ export interface SubCategoryMeta {
   createdAt: string;
 }
 
+export interface StoredBundleFile {
+  name: string;
+  path?: string;
+  blob: Blob;
+  mimeType?: string;
+  sizeBytes?: number;
+}
+
 export interface StoredMediaFile {
   id: string;
   fileName: string;
   mimeType: string;
-  extension: string; // jpg, jpeg, png, glb, obj, stl, fbx
+  extension: string; // jpg, jpeg, png, glb, obj, stl, fbx, obj_bundle
   category: '2d_image' | '3d_model';
   sizeBytes: number;
   dataUrl?: string;
   blob?: Blob;
+  bundleFiles?: StoredBundleFile[]; // Folder / package attachments (.mtl, texture maps: .png, .jpg, etc.)
+  organId?: string;
   uploadedBy?: string;
   institution?: string;
   createdAt: string;

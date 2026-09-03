@@ -20,9 +20,14 @@ import {
   Plus,
   Trash2,
   Star,
-  ExternalLink
+  ExternalLink,
+  Folder,
+  FolderArchive,
+  Archive,
+  FileText
 } from 'lucide-react';
-import { Organ, MediaType, Model3DPreset, UserProfile, Supported3DFormat, OrganMediaItem } from '../types';
+import * as fflate from 'fflate';
+import { Organ, MediaType, Model3DPreset, UserProfile, Supported3DFormat, OrganMediaItem, StoredBundleFile } from '../types';
 import { KNOWN_INSTITUTIONS, KNOWN_STANDARDS, DEFAULT_STANDARD, AnatomyDatabaseService } from '../services/db';
 
 interface AddOrganModalProps {
@@ -135,6 +140,17 @@ export default function AddOrganModal({
     initialOrgan?.model3dData
   );
   const [model3dFileName, setModel3dFileName] = useState('');
+  const [upload3DMode, setUpload3DMode] = useState<'single' | 'folder' | 'zip'>('single');
+  const [model3dFileId, setModel3dFileId] = useState<string | undefined>(
+    initialOrgan?.mediaFileId || 
+    initialOrgan?.mediaItems?.find(m => m.type === '3d_model')?.mediaFileId
+  );
+  const [bundleSummary, setBundleSummary] = useState<{
+    objName?: string;
+    mtlName?: string;
+    textureCount: number;
+    totalSizeMB?: string;
+  } | null>(null);
 
   // 3. Primary Embed Setup
   const [embed3dUrl, setEmbed3dUrl] = useState(initialOrgan?.embed3dUrl || '');
@@ -241,7 +257,7 @@ export default function AddOrganModal({
     }
   };
 
-  // Handle 3D File Upload (GLB, OBJ, STL, FBX, GLTF)
+  // Handle 3D File Upload (GLB, OBJ, STL, FBX, GLTF) - Single File
   const handle3DFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -250,6 +266,7 @@ export default function AddOrganModal({
     setModel3dFileName(file.name);
     setModel3dType('custom_upload');
     setModel3dFormat(ext);
+    setBundleSummary(null);
     setIsProcessingFile(true);
     setFileFeedback(`Menyimpan berkas 3D ${file.name} ke database...`);
 
@@ -259,8 +276,12 @@ export default function AddOrganModal({
         file.name, 
         '3d_model', 
         dosenName, 
-        customInstitution || institution
+        customInstitution || institution,
+        undefined,
+        undefined,
+        initialOrgan?.id
       );
+      setModel3dFileId(stored.id);
       setModel3dData(stored.blobUrl);
 
       // Update or add to attachedMediaList
@@ -274,6 +295,7 @@ export default function AddOrganModal({
           url: stored.blobUrl,
           format: ext,
           model3dType: 'custom_upload',
+          mediaFileId: stored.id,
           fileName: file.name,
           fileSize: `${(file.size / 1024).toFixed(1)} KB`,
           isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
@@ -288,6 +310,329 @@ export default function AddOrganModal({
       console.error('Failed to store 3D file in database:', err);
       const blobUrl = URL.createObjectURL(file);
       setModel3dData(blobUrl);
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
+
+  // Handle 3D Folder Upload (Folder with .obj + .mtl + textures/contour)
+  const handle3DFolderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    
+    // Find .obj file
+    const objFile = fileList.find(f => f.name.toLowerCase().endsWith('.obj'));
+    if (!objFile) {
+      alert('Tidak ditemukan berkas berekstensi .obj di dalam folder yang dipilih. Pastikan folder memuat file .obj!');
+      return;
+    }
+
+    const mtlFile = fileList.find(f => f.name.toLowerCase().endsWith('.mtl'));
+    const textureFiles = fileList.filter(f => {
+      const ext = f.name.split('.').pop()?.toLowerCase();
+      return ['png', 'jpg', 'jpeg', 'webp', 'tga', 'bmp'].includes(ext || '');
+    });
+
+    const folderName = objFile.webkitRelativePath 
+      ? objFile.webkitRelativePath.split('/')[0] 
+      : 'Folder_OBJ_Anatomi';
+
+    setModel3dFileName(`${folderName} (${objFile.name} + ${textureFiles.length} tekstur/kontur)`);
+    setModel3dType('custom_upload');
+    setModel3dFormat('obj_bundle');
+    setIsProcessingFile(true);
+    setFileFeedback(`Membaca folder ${folderName}: ${fileList.length} berkas ditemukan...`);
+
+    try {
+      const bundleFiles: StoredBundleFile[] = [];
+
+      if (mtlFile) {
+        bundleFiles.push({
+          name: mtlFile.name,
+          blob: mtlFile,
+          mimeType: 'text/plain',
+          sizeBytes: mtlFile.size
+        });
+      }
+
+      for (const tFile of textureFiles) {
+        bundleFiles.push({
+          name: tFile.name,
+          blob: tFile,
+          mimeType: tFile.type || 'image/jpeg',
+          sizeBytes: tFile.size
+        });
+      }
+
+      const stored = await AnatomyDatabaseService.storeMediaFile(
+        objFile,
+        objFile.name,
+        '3d_model',
+        dosenName,
+        customInstitution || institution,
+        undefined,
+        bundleFiles,
+        initialOrgan?.id
+      );
+
+      setModel3dFileId(stored.id);
+      setModel3dData(stored.blobUrl);
+
+      const totalSize = (objFile.size + bundleFiles.reduce((acc, b) => acc + (b.sizeBytes || 0), 0)) / (1024 * 1024);
+      setBundleSummary({
+        objName: objFile.name,
+        mtlName: mtlFile?.name,
+        textureCount: textureFiles.length,
+        totalSizeMB: totalSize.toFixed(2)
+      });
+
+      // Update attachedMediaList
+      setAttachedMediaList(prev => {
+        const copy = [...prev];
+        const existingIdx = copy.findIndex(m => m.type === '3d_model');
+        const newItem: OrganMediaItem = {
+          id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
+          title: `Model 3D Folder OBJ (${folderName})`,
+          type: '3d_model',
+          url: stored.blobUrl,
+          format: 'obj_bundle',
+          model3dType: 'custom_upload',
+          mediaFileId: stored.id,
+          fileName: `${objFile.name} (+${bundleFiles.length} berkas pendukung)`,
+          fileSize: `${totalSize.toFixed(2)} MB`,
+          isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
+        };
+        if (existingIdx >= 0) copy[existingIdx] = newItem;
+        else copy.push(newItem);
+        return copy;
+      });
+
+      setFileFeedback(`✔ Folder OBJ "${folderName}" berhasil disimpan: ${objFile.name}, ${mtlFile ? mtlFile.name : 'tanpa .mtl'}, ${textureFiles.length} berkas kontur/tekstur.`);
+    } catch (err: any) {
+      console.error('Failed to store folder 3D files:', err);
+      alert('Gagal menyimpan folder 3D: ' + (err?.message || String(err)));
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
+
+  // Handle 3D ZIP Archive or Multi-File Upload (.zip containing .obj + .mtl + textures)
+  const handle3DZipOrMultiUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    
+    // Check if user uploaded a single ZIP archive
+    if (fileList.length === 1 && fileList[0].name.toLowerCase().endsWith('.zip')) {
+      const zipFile = fileList[0];
+      setIsProcessingFile(true);
+      setFileFeedback(`Mengekstrak arsip ZIP "${zipFile.name}"...`);
+
+      try {
+        const buffer = await zipFile.arrayBuffer();
+        const uint8 = new Uint8Array(buffer);
+
+        const unzipped = await new Promise<{ [key: string]: Uint8Array }>((resolve, reject) => {
+          fflate.unzip(uint8, (err, data) => {
+            if (err) reject(err);
+            else resolve(data);
+          });
+        });
+
+        // Scan unzipped files
+        let objEntry: { name: string; data: Uint8Array } | null = null;
+        let mtlEntry: { name: string; data: Uint8Array } | null = null;
+        const textureEntries: { name: string; data: Uint8Array }[] = [];
+
+        for (const [filePath, fileData] of Object.entries(unzipped)) {
+          if (filePath.endsWith('/') || fileData.length === 0) continue; // skip folder entries
+          const lower = filePath.toLowerCase();
+          const fileName = filePath.split('/').pop() || filePath;
+          
+          if (lower.endsWith('.obj')) {
+            if (!objEntry) objEntry = { name: fileName, data: fileData };
+          } else if (lower.endsWith('.mtl')) {
+            if (!mtlEntry) mtlEntry = { name: fileName, data: fileData };
+          } else {
+            const ext = fileName.split('.').pop()?.toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'webp', 'tga', 'bmp'].includes(ext || '')) {
+              textureEntries.push({ name: fileName, data: fileData });
+            }
+          }
+        }
+
+        if (!objEntry) {
+          alert('Arsip ZIP tidak memuat berkas .obj. Pastikan berkas 3D OBJ berada di dalam file ZIP.');
+          setIsProcessingFile(false);
+          return;
+        }
+
+        const objBlob = new Blob([objEntry.data], { type: 'text/plain' });
+        const bundleFiles: StoredBundleFile[] = [];
+
+        if (mtlEntry) {
+          bundleFiles.push({
+            name: mtlEntry.name,
+            blob: new Blob([mtlEntry.data], { type: 'text/plain' }),
+            mimeType: 'text/plain',
+            sizeBytes: mtlEntry.data.length
+          });
+        }
+
+        for (const t of textureEntries) {
+          const ext = t.name.split('.').pop()?.toLowerCase();
+          const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+          bundleFiles.push({
+            name: t.name,
+            blob: new Blob([t.data], { type: mime }),
+            mimeType: mime,
+            sizeBytes: t.data.length
+          });
+        }
+
+        const stored = await AnatomyDatabaseService.storeMediaFile(
+          objBlob,
+          objEntry.name,
+          '3d_model',
+          dosenName,
+          customInstitution || institution,
+          undefined,
+          bundleFiles,
+          initialOrgan?.id
+        );
+
+        setModel3dFileName(`${zipFile.name} (${objEntry.name} + ${textureEntries.length} kontur)`);
+        setModel3dType('custom_upload');
+        setModel3dFormat('obj_bundle');
+        setModel3dFileId(stored.id);
+        setModel3dData(stored.blobUrl);
+
+        const totalSize = zipFile.size / (1024 * 1024);
+        setBundleSummary({
+          objName: objEntry.name,
+          mtlName: mtlEntry?.name,
+          textureCount: textureEntries.length,
+          totalSizeMB: totalSize.toFixed(2)
+        });
+
+        // Update attachedMediaList
+        setAttachedMediaList(prev => {
+          const copy = [...prev];
+          const existingIdx = copy.findIndex(m => m.type === '3d_model');
+          const newItem: OrganMediaItem = {
+            id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
+            title: `Model 3D ZIP OBJ (${zipFile.name})`,
+            type: '3d_model',
+            url: stored.blobUrl,
+            format: 'obj_bundle',
+            model3dType: 'custom_upload',
+            mediaFileId: stored.id,
+            fileName: `${objEntry!.name} (+${bundleFiles.length} berkas ZIP)`,
+            fileSize: `${totalSize.toFixed(2)} MB`,
+            isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
+          };
+          if (existingIdx >= 0) copy[existingIdx] = newItem;
+          else copy.push(newItem);
+          return copy;
+        });
+
+        setFileFeedback(`✔ Arsip ZIP diekstrak: ${objEntry.name}, ${mtlEntry ? mtlEntry.name : 'tanpa .mtl'}, ${textureEntries.length} kontur/tekstur.`);
+      } catch (err: any) {
+        console.error('Failed to extract ZIP:', err);
+        alert('Gagal mengekstrak berkas ZIP: ' + (err?.message || String(err)));
+      } finally {
+        setIsProcessingFile(false);
+      }
+      return;
+    }
+
+    // Multi-File selection (.obj + .mtl + .png, etc.)
+    const objFile = fileList.find(f => f.name.toLowerCase().endsWith('.obj'));
+    if (!objFile) {
+      alert('Harap sertakan setidaknya satu berkas .obj!');
+      return;
+    }
+
+    const mtlFile = fileList.find(f => f.name.toLowerCase().endsWith('.mtl'));
+    const textureFiles = fileList.filter(f => {
+      const ext = f.name.split('.').pop()?.toLowerCase();
+      return ['png', 'jpg', 'jpeg', 'webp', 'tga', 'bmp'].includes(ext || '');
+    });
+
+    setIsProcessingFile(true);
+    setFileFeedback(`Menyimpan ${fileList.length} berkas paket OBJ...`);
+
+    try {
+      const bundleFiles: StoredBundleFile[] = [];
+      if (mtlFile) {
+        bundleFiles.push({
+          name: mtlFile.name,
+          blob: mtlFile,
+          mimeType: 'text/plain',
+          sizeBytes: mtlFile.size
+        });
+      }
+      for (const t of textureFiles) {
+        bundleFiles.push({
+          name: t.name,
+          blob: t,
+          mimeType: t.type || 'image/jpeg',
+          sizeBytes: t.size
+        });
+      }
+
+      const stored = await AnatomyDatabaseService.storeMediaFile(
+        objFile,
+        objFile.name,
+        '3d_model',
+        dosenName,
+        customInstitution || institution,
+        undefined,
+        bundleFiles,
+        initialOrgan?.id
+      );
+
+      setModel3dFileName(`${objFile.name} (+${bundleFiles.length} berkas kontur)`);
+      setModel3dType('custom_upload');
+      setModel3dFormat('obj_bundle');
+      setModel3dFileId(stored.id);
+      setModel3dData(stored.blobUrl);
+
+      const totalSize = (objFile.size + bundleFiles.reduce((a, b) => a + (b.sizeBytes || 0), 0)) / (1024 * 1024);
+      setBundleSummary({
+        objName: objFile.name,
+        mtlName: mtlFile?.name,
+        textureCount: textureFiles.length,
+        totalSizeMB: totalSize.toFixed(2)
+      });
+
+      setAttachedMediaList(prev => {
+        const copy = [...prev];
+        const existingIdx = copy.findIndex(m => m.type === '3d_model');
+        const newItem: OrganMediaItem = {
+          id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
+          title: `Model 3D Paket OBJ (${objFile.name})`,
+          type: '3d_model',
+          url: stored.blobUrl,
+          format: 'obj_bundle',
+          model3dType: 'custom_upload',
+          mediaFileId: stored.id,
+          fileName: `${objFile.name} (+${bundleFiles.length} berkas)`,
+          fileSize: `${totalSize.toFixed(2)} MB`,
+          isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
+        };
+        if (existingIdx >= 0) copy[existingIdx] = newItem;
+        else copy.push(newItem);
+        return copy;
+      });
+
+      setFileFeedback(`✔ Berkas paket OBJ disimpan: ${objFile.name}, ${mtlFile ? mtlFile.name : 'tanpa .mtl'}, ${textureFiles.length} kontur.`);
+    } catch (err: any) {
+      console.error('Failed to store OBJ bundle files:', err);
+      alert('Gagal menyimpan berkas OBJ: ' + (err?.message || String(err)));
     } finally {
       setIsProcessingFile(false);
     }
@@ -390,6 +735,7 @@ export default function AddOrganModal({
       model3dType: model3dType,
       model3dData: model3dData,
       model3dFormat: model3dFormat,
+      mediaFileId: model3dFileId,
       embed3dUrl: embed3dUrl || attachedMediaList.find(m => m.type === '3d_embed')?.url,
       mediaItems: attachedMediaList, // Full Multi-Media & Multi-Object Array
       description: description.trim(),
@@ -701,36 +1047,136 @@ export default function AddOrganModal({
                 </div>
               </div>
 
-              {/* Card 2: 3D Model File (GLB / OBJ / STL / FBX) */}
+              {/* Card 2: 3D Model File (GLB / OBJ / STL / FBX or Folder / ZIP) */}
               <div className={`p-3 rounded-xl border flex flex-col justify-between space-y-2.5 ${
                 isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-teal-300 flex items-center gap-1">
-                    <Box className="w-3.5 h-3.5" /> 2. Berkas 3D (WebGL)
+                    <Box className="w-3.5 h-3.5" /> 2. Objek 3D (WebGL)
                   </span>
-                  <span className="text-[9px] font-mono text-slate-400">GLB/OBJ/STL</span>
+                  <span className="text-[9px] font-mono text-slate-400">
+                    {upload3DMode === 'folder' ? 'Folder OBJ' : upload3DMode === 'zip' ? 'Paket ZIP' : 'Berkas 3D'}
+                  </span>
                 </div>
 
-                <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
-                  isDark ? 'border-slate-800 hover:border-teal-500 bg-slate-950' : 'border-slate-300 hover:border-teal-500 bg-slate-50'
-                }`}>
-                  <Upload className="w-4 h-4 text-teal-400 mb-1" />
-                  <span className="text-[11px] text-slate-300 font-medium text-center truncate max-w-[170px]">
-                    {model3dFileName || 'Upload Berkas 3D'}
-                  </span>
-                  <span className="text-[9px] text-slate-500">.glb, .gltf, .obj, .stl, .fbx</span>
-                  <input
-                    type="file"
-                    accept=".glb, .gltf, .obj, .stl, .fbx, model/gltf-binary"
-                    onChange={handle3DFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                {/* Mode Selector Tabs */}
+                <div className="flex p-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setUpload3DMode('single')}
+                    className={`flex-1 py-1 px-1 rounded text-center font-medium transition-all ${
+                      upload3DMode === 'single'
+                        ? 'bg-teal-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Berkas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUpload3DMode('folder')}
+                    className={`flex-1 py-1 px-1 rounded text-center font-medium transition-all flex items-center justify-center gap-0.5 ${
+                      upload3DMode === 'folder'
+                        ? 'bg-teal-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Folder className="w-2.5 h-2.5" /> Folder OBJ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUpload3DMode('zip')}
+                    className={`flex-1 py-1 px-1 rounded text-center font-medium transition-all flex items-center justify-center gap-0.5 ${
+                      upload3DMode === 'zip'
+                        ? 'bg-teal-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Archive className="w-2.5 h-2.5" /> ZIP/Multi
+                  </button>
+                </div>
+
+                {/* Upload Zone based on active mode */}
+                {upload3DMode === 'single' && (
+                  <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
+                    isDark ? 'border-slate-800 hover:border-teal-500 bg-slate-950' : 'border-slate-300 hover:border-teal-500 bg-slate-50'
+                  }`}>
+                    <Upload className="w-4 h-4 text-teal-400 mb-1" />
+                    <span className="text-[11px] text-slate-300 font-medium text-center truncate max-w-[170px]">
+                      {model3dFileName || 'Upload Berkas 3D Tunggal'}
+                    </span>
+                    <span className="text-[9px] text-slate-500">.glb, .gltf, .obj, .stl, .fbx</span>
+                    <input
+                      type="file"
+                      accept=".glb, .gltf, .obj, .stl, .fbx, model/gltf-binary"
+                      onChange={handle3DFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                {upload3DMode === 'folder' && (
+                  <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
+                    isDark ? 'border-teal-500/40 hover:border-teal-400 bg-teal-950/20' : 'border-teal-300 hover:border-teal-500 bg-teal-50/50'
+                  }`}>
+                    <Folder className="w-4 h-4 text-teal-400 mb-1" />
+                    <span className="text-[11px] text-teal-300 font-medium text-center truncate max-w-[170px]">
+                      {model3dFileName || 'Pilih Folder OBJ & Kontur'}
+                    </span>
+                    <span className="text-[9px] text-slate-400 text-center px-1">
+                      Folder berisi .obj + .mtl + kontur/tekstur
+                    </span>
+                    <input
+                      type="file"
+                      {...({ webkitdirectory: '', directory: '' } as any)}
+                      multiple
+                      onChange={handle3DFolderUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                {upload3DMode === 'zip' && (
+                  <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-2.5 cursor-pointer transition-colors ${
+                    isDark ? 'border-teal-500/40 hover:border-teal-400 bg-teal-950/20' : 'border-teal-300 hover:border-teal-500 bg-teal-50/50'
+                  }`}>
+                    <Archive className="w-4 h-4 text-teal-400 mb-1" />
+                    <span className="text-[11px] text-teal-300 font-medium text-center truncate max-w-[170px]">
+                      {model3dFileName || 'Upload ZIP / Multi-Berkas'}
+                    </span>
+                    <span className="text-[9px] text-slate-400 text-center px-1">
+                      Arsip .zip atau pilih .obj + .mtl + .png
+                    </span>
+                    <input
+                      type="file"
+                      accept=".zip, .obj, .mtl, .png, .jpg, .jpeg, .webp, .tga"
+                      multiple
+                      onChange={handle3DZipOrMultiUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                {/* Bundle summary if loaded */}
+                {bundleSummary && (
+                  <div className="p-1.5 rounded bg-teal-500/10 border border-teal-500/20 text-[10px] space-y-0.5">
+                    <div className="flex items-center justify-between text-teal-300 font-semibold">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-teal-400" />
+                        Paket OBJ Siap
+                      </span>
+                      <span>{bundleSummary.totalSizeMB} MB</span>
+                    </div>
+                    <p className="text-[9px] text-slate-400 truncate">
+                      {bundleSummary.objName} • {bundleSummary.mtlName || 'No MTL'} • {bundleSummary.textureCount} kontur
+                    </p>
+                  </div>
+                )}
 
                 {/* 3D Preset Selection */}
                 <div>
-                  <span className="text-[9px] font-mono text-slate-400 block mb-1">Preset Engine 3D:</span>
+                  <span className="text-[9px] font-mono text-slate-400 block mb-1">Preset Fallback:</span>
                   <select
                     value={model3dType}
                     onChange={(e) => {

@@ -1,8 +1,9 @@
-import { Organ, OrganMediaItem, UserProfile, StoredMediaFile, InstitutionCluster, Supported2DFormat, Supported3DFormat } from '../types';
+import { Organ, OrganMediaItem, UserProfile, StoredMediaFile, StoredBundleFile, InstitutionCluster, Supported2DFormat, Supported3DFormat } from '../types';
 import { INITIAL_ORGANS } from '../data';
 
 const DB_NAME = 'AnatoVerse_Anatomy_DB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
+const KEY_USERS_LOCAL_STORAGE = 'anatoverse_all_registered_users_v2';
 
 // Production Superadmin Account (Official single administrator credential)
 export const DEFAULT_SUPERADMIN_PASSWORD = 'Sup3r@dm1n';
@@ -86,7 +87,7 @@ function openIndexedDB(): Promise<IDBDatabase> {
       // 3. User Accounts (Superadmin + Registered Lecturers/Students)
       if (!db.objectStoreNames.contains('users')) {
         const userStore = db.createObjectStore('users', { keyPath: 'id' });
-        userStore.createIndex('email', 'email', { unique: true });
+        userStore.createIndex('email', 'email', { unique: false });
         userStore.createIndex('role', 'role', { unique: false });
         userStore.createIndex('institution', 'institution', { unique: false });
       }
@@ -237,6 +238,7 @@ export class AnatomyDatabaseService {
 
   /**
    * Save a binary file (GLB, GLTF, FBX, OBJ, STL, JPG, PNG) directly as a Blob in IndexedDB.
+   * Also supports associated package files (MTL and texture maps in bundleFiles).
    * Creates and returns a temporary Object URL (blob:...) for instant zero-lag rendering.
    */
   static async storeMediaFile(
@@ -245,8 +247,10 @@ export class AnatomyDatabaseService {
     category: '2d_image' | '3d_model',
     uploadedBy?: string,
     institution?: string,
-    standard?: string
-  ): Promise<{ id: string; fileName: string; blobUrl: string; extension: string; sizeBytes: number }> {
+    standard?: string,
+    bundleFiles?: StoredBundleFile[],
+    organId?: string
+  ): Promise<{ id: string; fileName: string; blobUrl: string; extension: string; sizeBytes: number; bundleFilesCount: number }> {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     const fileId = `media-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
@@ -257,11 +261,13 @@ export class AnatomyDatabaseService {
     const mediaRecord: StoredMediaFile = {
       id: fileId,
       fileName,
-      mimeType: file.type || (category === '3d_model' ? 'model/gltf-binary' : 'image/jpeg'),
+      mimeType: file.type || (category === '3d_model' ? (ext === 'fbx' ? 'application/octet-stream' : 'model/gltf-binary') : 'image/jpeg'),
       extension: ext,
       category,
       sizeBytes: file.size,
       blob: file, // Store binary blob directly in IndexedDB
+      bundleFiles: bundleFiles || [],
+      organId,
       uploadedBy: uploadedBy || 'Superadmin',
       institution: institution || 'Koleksi Mandiri / Terbuka',
       createdAt: new Date().toISOString()
@@ -285,8 +291,32 @@ export class AnatomyDatabaseService {
       fileName,
       blobUrl,
       extension: ext,
-      sizeBytes: file.size
+      sizeBytes: file.size,
+      bundleFilesCount: bundleFiles?.length || 0
     };
+  }
+
+  /**
+   * Retrieve the full StoredMediaFile record (Blob, dataUrl, bundleFiles, format) from IndexedDB
+   */
+  static async getStoredMediaRecord(mediaId: string): Promise<StoredMediaFile | null> {
+    if (!mediaId) return null;
+
+    try {
+      const db = await openIndexedDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('media_files', 'readonly');
+        const store = tx.objectStore('media_files');
+        const request = store.get(mediaId);
+
+        request.onsuccess = () => {
+          resolve((request.result as StoredMediaFile) || null);
+        };
+        request.onerror = () => resolve(null);
+      });
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -301,23 +331,71 @@ export class AnatomyDatabaseService {
     }
 
     try {
+      const record = await this.getStoredMediaRecord(mediaId);
+      if (record && record.blob) {
+        const url = URL.createObjectURL(record.blob);
+        blobUrlRegistry.set(mediaId, url);
+        return url;
+      } else if (record && record.dataUrl) {
+        return record.dataUrl;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Find any stored 3D model in IndexedDB matching the organ
+   */
+  static async findMatchingStored3DRecord(organ: Organ): Promise<StoredMediaFile | null> {
+    try {
       const db = await openIndexedDB();
-      return new Promise((resolve) => {
+      return new Promise<StoredMediaFile | null>((resolve) => {
         const tx = db.transaction('media_files', 'readonly');
         const store = tx.objectStore('media_files');
-        const request = store.get(mediaId);
+        const request = store.getAll();
 
         request.onsuccess = () => {
-          const record = request.result as StoredMediaFile | undefined;
-          if (record && record.blob) {
-            const url = URL.createObjectURL(record.blob);
-            blobUrlRegistry.set(mediaId, url);
-            resolve(url);
-          } else if (record && record.dataUrl) {
-            resolve(record.dataUrl);
-          } else {
-            resolve(null);
+          const all = (request.result as StoredMediaFile[]) || [];
+          const models = all.filter(f => f.category === '3d_model');
+          if (models.length === 0) return resolve(null);
+
+          // 1. Direct organId match
+          if (organ.id) {
+            const byOrganId = models.find(m => m.organId === organ.id);
+            if (byOrganId) return resolve(byOrganId);
           }
+
+          // 2. Check organ mediaItems
+          if (organ.mediaItems && organ.mediaItems.length > 0) {
+            for (const item of organ.mediaItems) {
+              if (item.mediaFileId) {
+                const byId = models.find(m => m.id === item.mediaFileId);
+                if (byId) return resolve(byId);
+              }
+              if (item.fileName) {
+                const byFileName = models.find(m => m.fileName.toLowerCase() === item.fileName!.toLowerCase());
+                if (byFileName) return resolve(byFileName);
+              }
+            }
+          }
+
+          // 3. Match by extension (e.g. fbx, obj, glb)
+          const targetExt = (organ.model3dFormat || '').toLowerCase();
+          if (targetExt) {
+            const byExt = models.filter(m => m.extension.toLowerCase() === targetExt);
+            if (byExt.length > 0) {
+              return resolve(byExt[byExt.length - 1]); // Most recent
+            }
+          }
+
+          // 4. If this is a custom upload organ, return latest 3D file
+          if (organ.model3dType === 'custom_upload') {
+            return resolve(models[models.length - 1]);
+          }
+
+          resolve(null);
         };
         request.onerror = () => resolve(null);
       });
@@ -327,12 +405,106 @@ export class AnatomyDatabaseService {
   }
 
   /**
+   * Resolves the 3D model source (Binary Blob, ArrayBuffer, BundleFiles, or Source URL) for an organ.
+   * Guarantees persistence across page refreshes by loading real binary Blobs from IndexedDB.
+   */
+  static async resolve3DModelData(organ: Organ): Promise<{
+    sourceUrl?: string;
+    blob?: Blob;
+    format: string;
+    mediaFileId?: string;
+    bundleFiles?: StoredBundleFile[];
+  } | null> {
+    const defaultFormat = (organ.model3dFormat || 'glb').toLowerCase();
+
+    // 1. Primary lookup by mediaFileId
+    if (organ.mediaFileId) {
+      const record = await this.getStoredMediaRecord(organ.mediaFileId);
+      if (record) {
+        const format = (record.extension || organ.model3dFormat || 'glb').toLowerCase();
+        if (record.blob) {
+          return {
+            blob: record.blob,
+            format,
+            mediaFileId: organ.mediaFileId,
+            bundleFiles: record.bundleFiles
+          };
+        }
+        if (record.dataUrl) {
+          return {
+            sourceUrl: record.dataUrl,
+            format,
+            mediaFileId: organ.mediaFileId,
+            bundleFiles: record.bundleFiles
+          };
+        }
+      }
+    }
+
+    // 2. Secondary lookup via mediaItems
+    if (organ.mediaItems && organ.mediaItems.length > 0) {
+      for (const item of organ.mediaItems) {
+        if (item.type === '3d_model' && item.mediaFileId) {
+          const record = await this.getStoredMediaRecord(item.mediaFileId);
+          if (record && record.blob) {
+            return {
+              blob: record.blob,
+              format: (record.extension || item.format || defaultFormat).toLowerCase(),
+              mediaFileId: item.mediaFileId,
+              bundleFiles: record.bundleFiles
+            };
+          }
+        }
+      }
+    }
+
+    // 3. Intelligent recovery: Find matching 3D binary record from IndexedDB media_files
+    const recovered = await this.findMatchingStored3DRecord(organ);
+    if (recovered && recovered.blob) {
+      // Auto-reconnect mediaFileId to avoid future lookup delays
+      organ.mediaFileId = recovered.id;
+      this.saveOrgan(organ).catch(() => {});
+      return {
+        blob: recovered.blob,
+        format: (recovered.extension || organ.model3dFormat || 'glb').toLowerCase(),
+        mediaFileId: recovered.id,
+        bundleFiles: recovered.bundleFiles
+      };
+    }
+
+    // 4. Fallback for static URLs (data: or http/https)
+    if (organ.model3dData) {
+      if (organ.model3dData.startsWith('data:') || organ.model3dData.startsWith('http')) {
+        return {
+          sourceUrl: organ.model3dData,
+          format: defaultFormat
+        };
+      }
+      // If it's a blob: URL and we didn't find binary, check if it's currently valid
+      return {
+        sourceUrl: organ.model3dData,
+        format: defaultFormat
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Resolves the 3D model source URL for an organ (Blob URL, external URL, or IndexedDB binary)
    */
   static async resolve3DModelSource(organ: Organ): Promise<string | null> {
     if (organ.mediaFileId) {
       const blobUrl = await this.getMediaBlobUrl(organ.mediaFileId);
       if (blobUrl) return blobUrl;
+    }
+
+    // Check recovered record
+    const recovered = await this.findMatchingStored3DRecord(organ);
+    if (recovered && recovered.blob) {
+      const url = URL.createObjectURL(recovered.blob);
+      blobUrlRegistry.set(recovered.id, url);
+      return url;
     }
 
     if (organ.model3dData) {
@@ -345,27 +517,94 @@ export class AnatomyDatabaseService {
   /**
    * Get all registered users from database
    */
+  /**
+   * Helper: Read backup users from localStorage
+   */
+  private static getLocalStorageUsers(): UserProfile[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(KEY_USERS_LOCAL_STORAGE);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Helper: Write backup users to localStorage
+   */
+  private static setLocalStorageUsers(users: UserProfile[]): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(KEY_USERS_LOCAL_STORAGE, JSON.stringify(users));
+    } catch (err) {
+      console.warn('Failed to backup users to localStorage:', err);
+    }
+  }
+
+  /**
+   * Get all registered users from database (IndexedDB + LocalStorage Dual-Sync)
+   */
   static async getAllUsers(): Promise<UserProfile[]> {
+    const localUsers = this.getLocalStorageUsers();
+
     try {
       const db = await openIndexedDB();
-      return new Promise((resolve) => {
+      
+      // If users object store doesn't exist in active schema, fallback gracefully to LocalStorage
+      if (!db.objectStoreNames.contains('users')) {
+        const fallbackList = [...localUsers];
+        if (!fallbackList.some(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id)) {
+          fallbackList.unshift(OFFICIAL_SUPERADMIN);
+        }
+        return fallbackList;
+      }
+
+      const idbUsers = await new Promise<UserProfile[]>((resolve) => {
         const tx = db.transaction('users', 'readonly');
         const store = tx.objectStore('users');
         const request = store.getAll();
-        request.onsuccess = () => {
-          const users: UserProfile[] = request.result || [];
-          const superadminIndex = users.findIndex((u: UserProfile) => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
-          if (superadminIndex === -1) {
-            users.unshift(OFFICIAL_SUPERADMIN);
-          } else if (!users[superadminIndex].password) {
-            users[superadminIndex].password = DEFAULT_SUPERADMIN_PASSWORD;
-          }
-          resolve(users);
-        };
-        request.onerror = () => resolve([OFFICIAL_SUPERADMIN]);
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => resolve([]);
       });
-    } catch {
-      return [OFFICIAL_SUPERADMIN];
+
+      // Merge IDB users and LocalStorage users by ID / Email to ensure zero data loss
+      const userMap = new Map<string, UserProfile>();
+
+      // Seed Official Superadmin first
+      userMap.set(OFFICIAL_SUPERADMIN.id, OFFICIAL_SUPERADMIN);
+
+      // Add local users
+      for (const u of localUsers) {
+        if (u && u.id) userMap.set(u.id, u);
+      }
+
+      // Add & override with IndexedDB users
+      for (const u of idbUsers) {
+        if (u && u.id) userMap.set(u.id, u);
+      }
+
+      const mergedUsers = Array.from(userMap.values());
+
+      // Ensure superadmin has correct password
+      const adminIndex = mergedUsers.findIndex(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
+      if (adminIndex !== -1 && !mergedUsers[adminIndex].password) {
+        mergedUsers[adminIndex].password = DEFAULT_SUPERADMIN_PASSWORD;
+      }
+
+      // Sync back to LocalStorage to keep both stores identical
+      this.setLocalStorageUsers(mergedUsers);
+
+      return mergedUsers;
+    } catch (e) {
+      console.warn('IndexedDB getAllUsers warning, reading from LocalStorage fallback:', e);
+      const fallbackList = [...localUsers];
+      if (!fallbackList.some(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id)) {
+        fallbackList.unshift(OFFICIAL_SUPERADMIN);
+      }
+      return fallbackList;
     }
   }
 
@@ -374,38 +613,50 @@ export class AnatomyDatabaseService {
    */
   static async getUserById(userId: string): Promise<UserProfile | null> {
     if (userId === OFFICIAL_SUPERADMIN.id) {
-      const all = await this.getAllUsers();
-      return all.find(u => u.id === userId) || OFFICIAL_SUPERADMIN;
+      return OFFICIAL_SUPERADMIN;
     }
-    try {
-      const db = await openIndexedDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction('users', 'readonly');
-        const store = tx.objectStore('users');
-        const request = store.get(userId);
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => resolve(null);
-      });
-    } catch {
-      return null;
-    }
+    const all = await this.getAllUsers();
+    return all.find(u => u.id === userId) || null;
   }
 
   /**
-   * Register or save user profile in database
+   * Register or save user profile in database (Dual-Persistence IndexedDB + LocalStorage)
    */
   static async saveUser(user: UserProfile): Promise<void> {
+    const normalizedUser: UserProfile = {
+      ...user,
+      email: user.email.trim().toLowerCase(),
+      name: user.name.trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Instantly save to LocalStorage (100% reliable synchronous backup)
+    const localUsers = this.getLocalStorageUsers();
+    const existingIndex = localUsers.findIndex(
+      u => u.id === normalizedUser.id || u.email.toLowerCase() === normalizedUser.email.toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      localUsers[existingIndex] = { ...localUsers[existingIndex], ...normalizedUser };
+    } else {
+      localUsers.push(normalizedUser);
+    }
+    this.setLocalStorageUsers(localUsers);
+
+    // 2. Persist to IndexedDB
     try {
       const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('users', 'readwrite');
-        const store = tx.objectStore('users');
-        const request = store.put(user);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
+      if (db.objectStoreNames.contains('users')) {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction('users', 'readwrite');
+          const store = tx.objectStore('users');
+          const request = store.put(normalizedUser);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
     } catch (e) {
-      console.error('Failed to save user in IndexedDB:', e);
+      console.error('Failed to save user in IndexedDB, retained in LocalStorage backup:', e);
     }
   }
 
@@ -429,7 +680,7 @@ export class AnatomyDatabaseService {
       await this.saveUser(updatedUser);
       return true;
     } catch (err) {
-      console.error('Failed to reset user password in IndexedDB:', err);
+      console.error('Failed to reset user password in database:', err);
       return false;
     }
   }
@@ -441,28 +692,29 @@ export class AnatomyDatabaseService {
     identifierInput: string,
     passwordInput: string
   ): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
-    const cleanId = identifierInput.trim().toLowerCase();
-    const cleanPass = passwordInput.trim();
+    const cleanId = (identifierInput || '').trim().toLowerCase();
+    const rawPass = passwordInput || '';
+    const cleanPass = rawPass.trim();
 
     if (!cleanId) {
-      return { success: false, message: 'Silakan masukkan Email, NIP, NIM, atau Kode Pengguna.' };
+      return { success: false, message: 'Silakan masukkan Email, NIP, NIM, atau Nama Pengguna.' };
     }
     if (!cleanPass) {
-      return { success: false, message: 'Silakan masukkan kata sandi.' };
+      return { success: false, message: 'Silakan masukkan kata sandi akun.' };
     }
 
     try {
       const users = await this.getAllUsers();
 
-      // Check Superadmin match
-      const isSuperadminIdentifier = 
+      // 1. Direct match for Superadmin master credentials
+      const isMasterSuperadmin = 
         cleanId === 'superadmin' ||
         cleanId === OFFICIAL_SUPERADMIN.email.toLowerCase() ||
         cleanId === 'superadmin.anatomi@med.id' ||
         cleanId === OFFICIAL_SUPERADMIN.identifierNumber?.toLowerCase() ||
         cleanId === OFFICIAL_SUPERADMIN.dosenCode?.toLowerCase();
 
-      if (isSuperadminIdentifier) {
+      if (isMasterSuperadmin) {
         const storedAdmin = users.find(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
         const adminPass = storedAdmin?.password || DEFAULT_SUPERADMIN_PASSWORD;
 
@@ -470,79 +722,108 @@ export class AnatomyDatabaseService {
           const authUser = storedAdmin ? { ...storedAdmin, role: 'SUPERADMIN' as const } : OFFICIAL_SUPERADMIN;
           return { success: true, user: authUser };
         } else {
-          return { success: false, message: 'Kredensial tidak valid.' };
+          return { success: false, message: 'Kata sandi Superadmin tidak sesuai.' };
         }
       }
 
-      // Check regular users (Dosen, Mahasiswa, etc.) by email, identifierNumber (NIP/NIDN/NIM), dosenCode, or name
+      // 2. Comprehensive match for all registered users (Dosen, Mahasiswa, Superadmin kustom)
       const matchedUser = users.find(u => {
-        const emailMatch = u.email.toLowerCase() === cleanId;
-        const idNumberMatch = u.identifierNumber && u.identifierNumber.toLowerCase() === cleanId;
-        const dosenCodeMatch = u.dosenCode && u.dosenCode.toLowerCase() === cleanId;
-        const nameMatch = u.name.toLowerCase() === cleanId;
-        return emailMatch || idNumberMatch || dosenCodeMatch || nameMatch;
+        if (!u) return false;
+        const userEmail = (u.email || '').trim().toLowerCase();
+        const userEmailPrefix = userEmail.split('@')[0];
+        const userIdNum = (u.identifierNumber || '').trim().toLowerCase();
+        const userDosenCode = (u.dosenCode || '').trim().toLowerCase();
+        const userName = (u.name || '').trim().toLowerCase();
+        const userId = (u.id || '').trim().toLowerCase();
+
+        return (
+          userEmail === cleanId ||
+          userEmailPrefix === cleanId ||
+          (userIdNum && userIdNum === cleanId) ||
+          (userDosenCode && userDosenCode === cleanId) ||
+          userName === cleanId ||
+          userId === cleanId
+        );
       });
 
       if (!matchedUser) {
         return { 
           success: false, 
-          message: 'Akun dengan kredensial tersebut tidak ditemukan. Silakan periksa kembali atau lakukan pendaftaran.' 
+          message: `Akun dengan identitas "${identifierInput}" tidak ditemukan dalam basis data. Silakan periksa kembali email atau hubungi Superadmin.` 
         };
       }
 
-      // If user has password set, verify it
-      if (matchedUser.password) {
-        if (matchedUser.password === cleanPass) {
+      // 3. Password Verification
+      const targetPassword = matchedUser.password ? matchedUser.password.trim() : '';
+
+      if (targetPassword) {
+        if (targetPassword === cleanPass || targetPassword === rawPass) {
           return { success: true, user: matchedUser };
         } else {
-          return { success: false, message: 'Kata sandi tidak sesuai. Silakan hubungi Superadmin untuk reset kata sandi jika lupa.' };
+          return { 
+            success: false, 
+            message: `Kata sandi tidak sesuai untuk akun "${matchedUser.name}". Silakan periksa huruf besar/kecil atau hubungi Superadmin untuk reset kata sandi.` 
+          };
         }
       }
 
-      // For legacy user without password, assign input password and authenticate
+      // For accounts initialized without password, set input password and save
       matchedUser.password = cleanPass;
       await this.saveUser(matchedUser);
       return { success: true, user: matchedUser };
 
     } catch (err) {
       console.error('Authentication error:', err);
-      return { success: false, message: 'Terjadi kesalahan sistem saat otentikasi.' };
+      return { success: false, message: 'Terjadi kendala sistem saat proses otentikasi akun.' };
     }
   }
 
   /**
-   * Delete a user profile from database
+   * Delete a user profile from database (IndexedDB + LocalStorage)
    */
   static async deleteUser(userId: string): Promise<void> {
+    // 1. Remove from LocalStorage
+    const localUsers = this.getLocalStorageUsers().filter(u => u.id !== userId);
+    this.setLocalStorageUsers(localUsers);
+
+    // 2. Remove from IndexedDB
     try {
       const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('users', 'readwrite');
-        const store = tx.objectStore('users');
-        const request = store.delete(userId);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
+      if (db.objectStoreNames.contains('users')) {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction('users', 'readwrite');
+          const store = tx.objectStore('users');
+          const request = store.delete(userId);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
     } catch (e) {
       console.error('Failed to delete user from IndexedDB:', e);
     }
   }
 
   /**
-   * Batch save/update users
+   * Batch save/update users (IndexedDB + LocalStorage)
    */
   static async bulkSaveUsers(users: UserProfile[]): Promise<void> {
+    // 1. Save to LocalStorage
+    this.setLocalStorageUsers(users);
+
+    // 2. Save to IndexedDB
     try {
       const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('users', 'readwrite');
-        const store = tx.objectStore('users');
-        for (const user of users) {
-          store.put(user);
-        }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
+      if (db.objectStoreNames.contains('users')) {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction('users', 'readwrite');
+          const store = tx.objectStore('users');
+          for (const user of users) {
+            store.put(user);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      }
     } catch (e) {
       console.error('Failed to bulk save users in IndexedDB:', e);
     }

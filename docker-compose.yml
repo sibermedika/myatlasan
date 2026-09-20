@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  anatoverse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: anatoverse-medika
+    restart: unless-stopped
+    ports:
+      # Port mapping: ganti APP_PORT di .env jika ingin port lain (default 3030)
+      - "${APP_PORT:-3030}:80"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

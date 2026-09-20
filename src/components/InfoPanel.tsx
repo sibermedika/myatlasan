@@ -23,6 +23,8 @@ interface InfoPanelProps {
   currentRole: UserRole;
   onEditPin?: (pin: Pin) => void;
   onDeletePin?: (pinId: string) => void;
+  onEditOrgan?: (organ: Organ) => void;
+  onDeleteOrgan?: (organId: string) => void;
   theme: 'dark' | 'light';
 }
 
@@ -32,6 +34,8 @@ export default function InfoPanel({
   currentRole,
   onEditPin,
   onDeletePin,
+  onEditOrgan,
+  onDeleteOrgan,
   theme
 }: InfoPanelProps) {
   const [activeTab, setActiveTab] = useState<'ORGAN' | 'PIN'>('ORGAN');
@@ -117,6 +121,45 @@ export default function InfoPanel({
           /* Tab 1: Full Organ Medical Details */
           <div className="space-y-4" id="info-tab-organ-content">
             
+            {/* Dosen & Admin Content Management Action Bar */}
+            {isDosenOrAdmin && (
+              <div className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 shadow-sm ${
+                isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-300'
+              }`} id="dosen-content-actions">
+                <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1 font-mono">
+                  <Sparkles className="w-3 h-3" /> Wewenang Dosen:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {onEditOrgan && (
+                    <button
+                      onClick={() => onEditOrgan(selectedOrgan)}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 text-[10px] font-bold hover:bg-amber-400 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                      title="Edit Konten 3D & Data Organ Ini"
+                      id="btn-edit-organ-info"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>Edit 3D</span>
+                    </button>
+                  )}
+                  {onDeleteOrgan && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Hapus konten 3D dan data organ "${selectedOrgan.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
+                          onDeleteOrgan(selectedOrgan.id);
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                      title="Hapus Konten 3D Organ Ini"
+                      id="btn-delete-organ-info"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Hapus</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Header: Organ Names, Standard & Institution Attribution */}
             <div className={`border-b pb-3 space-y-2 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -339,12 +382,12 @@ export default function InfoPanel({
 
       </div>
 
-      {/* Panel Footer Brand & Dr. Penggalih Credit */}
+      {/* Panel Footer Brand & Standard Info */}
       <div className={`border-t px-4 py-3 text-center text-[10px] font-medium shrink-0 font-mono flex flex-col items-center justify-center gap-0.5 ${
         isDark ? 'bg-slate-950 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-600'
       }`}>
-        <span className="text-teal-500 font-semibold">dikembangkan oleh dr. Penggalih</span>
-        <span className="text-[9px] opacity-75">Standar Kurikulum PAAI 2019</span>
+        <span className="text-teal-500 font-semibold">AnatoVerse • Atlas Anatomi Medis Terbuka</span>
+        <span className="text-[9px] opacity-75">Bebas Digunakan & Dikustomisasi Tiap Institusi</span>
       </div>
 
     </div>

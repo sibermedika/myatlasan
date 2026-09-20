@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev:local": "vite --port=3030 --host=0.0.0.0",
+    "dev:windows": "vite --port=3030 --host=localhost --open",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "preview:local": "vite preview --port=3030 --host=0.0.0.0",
+    "preview:windows": "vite preview --port=3030 --host=localhost --open",
+    "serve": "node server.mjs",
+    "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

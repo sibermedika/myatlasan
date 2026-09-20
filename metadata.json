@@ -1,6 +1,6 @@
 {
   "name": "Atlas Anatomi Tubuh Manusia Interaktif",
-  "description": "Platform atlas anatomi tubuh manusia interaktif 2D/3D standar kurikulum PAAI 2019 produksi rilis dengan basis data (IndexedDB/SQLite/MySQL), manajemen akun login resmi Superadmin, atribusi institusi dosen, dan fitur cluster koleksi berbasis institusi/universitas. Dikembangkan oleh dr. Penggalih.",
+  "description": "Platform atlas anatomi tubuh manusia interaktif 2D/3D standar kurikulum PAAI 2019 produksi rilis dengan basis data ringan (IndexedDB), otentikasi Admin & Dosen multi-institusi, serta dukungan instalasi fleksibel di Cloud (Docker/VPS/PaaS) maupun Localhost (Windows/Mac/Linux).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

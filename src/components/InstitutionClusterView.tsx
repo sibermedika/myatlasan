@@ -295,7 +295,7 @@ export default function InstitutionClusterView({
           isDark ? 'bg-slate-950 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-600'
         }`}>
           <span>Cluster Institusi Anatomi Medis Terpadu</span>
-          <span className="text-teal-400 font-semibold">Dikembangkan oleh dr. Penggalih</span>
+          <span className="text-teal-400 font-semibold">Bebas Dikustomisasi Tiap Institusi</span>
         </div>
 
       </div>

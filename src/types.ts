@@ -12,7 +12,7 @@ export interface Pin {
 
 export type MediaType = '2d_image' | '3d_model' | '3d_embed';
 export type Model3DPreset = 'heart' | 'brain' | 'lungs' | 'skull' | 'body' | 'custom_upload';
-export type Supported3DFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'fbx' | 'obj_bundle';
+export type Supported3DFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'fbx' | '3ds' | 'obj_bundle';
 export type Supported2DFormat = 'jpg' | 'jpeg' | 'png' | 'webp';
 
 export interface OrganMediaItem {
@@ -58,7 +58,8 @@ export interface Organ {
   updatedAt?: string;
 }
 
-export type UserRole = 'GUEST' | 'MAHASISWA' | 'DOSEN' | 'SUPERADMIN';
+// Role hak akses pengguna: Admin (Master Data) & Dosen (Konten 3D)
+export type UserRole = 'ADMIN' | 'DOSEN' | 'SUPERADMIN' | 'MAHASISWA' | 'GUEST';
 
 export interface UserProfile {
   id: string;

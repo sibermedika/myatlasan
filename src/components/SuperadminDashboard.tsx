@@ -1201,7 +1201,7 @@ export default function SuperadminDashboard({
                     type="text"
                     value={userForm.institution || ''}
                     onChange={(e) => setUserForm(prev => ({ ...prev, institution: e.target.value }))}
-                    placeholder="Contoh: FK UNISSULA Semarang"
+                    placeholder="Contoh: FK UI / FK Mandiri / RS Pendidikan"
                     className={`w-full px-3 py-1.5 rounded-lg border text-xs outline-none ${
                       isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500' : 'bg-slate-50 border-slate-200 text-slate-800'
                     }`}

@@ -52,13 +52,13 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase tracking-wider text-teal-500 font-bold block">
-                Inisiator & Pengembang Utama
+                Arsitektur Terbuka & Multi-Institusi
               </span>
               <h4 className="text-sm font-bold text-teal-300 dark:text-teal-300 light:text-teal-900">
-                dikembangkan oleh dr. Penggalih
+                AnatoVerse Medical Atlas Platform
               </h4>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Departemen Anatomi Medis • Berdasarkan Kurikulum PAAI 2019 Standard
+                Bebas Digunakan & Dikustomisasi untuk Setiap Fakultas Kedokteran & Institusi Kesehatan
               </p>
             </div>
           </div>
@@ -70,23 +70,23 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
             <ul className="space-y-2 text-slate-300 dark:text-slate-300 light:text-slate-700">
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span><strong>Multi-Role Authentication:</strong> Tamu (Guest Free), Mahasiswa Kedokteran (Full Access), Dosen Kontributor, dan Superadmin Master Data.</span>
+                <span><strong>Bebas Kustomisasi Institusi:</strong> Kredensial, daftar universitas, dan kluster institusi dapat dikonfigurasi mandiri oleh setiap Fakultas Kedokteran / Rumah Sakit Pendidikan.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span><strong>Kontributor Dosen & Kode Dosen:</strong> Dosen dapat menambah sub-kategori sendiri walau namanya sama, dibedakan dengan Kode Dosen otomatis (kombinasi nama dan tanggal).</span>
+                <span><strong>Role Pengguna Terstruktur:</strong> Admin berwenang mengelola Master Data & Akun, sedangkan Dosen berwenang menambah, mengedit, serta menghapus konten 3D dan pin landmark.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span><strong>Objek Visual 2D & 3D:</strong> Dukungan upload gambar 2D, upload berkas 3D (.glb/.gltf/.obj), model 3D Three.js bawaan, dan iframe embed Sketchfab.</span>
+                <span><strong>Standar Kurikulum Nasional:</strong> Mengacu pada standar taksonomi PAAI 2019 dan SKDI dengan penomoran bab yang terstruktur rapi.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span><strong>Labeling Pin Spasial X, Y, Z:</strong> Kemudahan menandai titik koordinat klik pada objek 2D dan 3D di backend dosen secara instan.</span>
+                <span><strong>Dukungan Visual 2D & 3D Lengkap:</strong> Mendukung upload berkas FBX, OBJ (+MTL/tekstur), GLB/GLTF, 3DS, gambar morfologi 2D, serta embed interaktif Sketchfab dan Google Drive.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span><strong>Mode Gelap-Terang Nyaman:</strong> Komposisi rasio kontras tinggi dan tipografi tajam yang nyaman untuk belajar.</span>
+                <span><strong>Penyimpanan Ringan Tanpa Beban Server:</strong> Menggunakan penyimpanan IndexedDB lokal di peramban yang instan, cepat, dan siap dijalankan di localhost port 3030 Windows.</span>
               </li>
             </ul>
           </div>
@@ -97,7 +97,7 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
         <div className={`px-6 py-3 border-t text-center text-xs font-mono ${
           isDark ? 'bg-slate-950 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-600'
         }`}>
-          © 2026 AnatoVerse Medika • dikembangkan oleh dr. Penggalih
+          © 2026 AnatoVerse Medika • Platform Edukasi Anatomi Terbuka
         </div>
 
       </div>

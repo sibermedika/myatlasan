@@ -14,7 +14,11 @@ import {
   Users,
   Info,
   Sparkles,
-  Building2
+  Building2,
+  Monitor,
+  Server,
+  Plus,
+  Box
 } from 'lucide-react';
 import { UserRole, UserProfile } from '../types';
 
@@ -26,6 +30,8 @@ interface NavbarProps {
   onOpenSecretAdmin?: () => void;
   onOpenClusterModal?: () => void;
   onOpenAboutModal?: () => void;
+  onOpenWindowsModal?: () => void;
+  onAddOrgan?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onResetData: () => void;
@@ -42,6 +48,8 @@ export default function Navbar({
   onOpenSecretAdmin,
   onOpenClusterModal,
   onOpenAboutModal,
+  onOpenWindowsModal,
+  onAddOrgan,
   searchQuery,
   onSearchChange,
   onResetData,
@@ -50,13 +58,15 @@ export default function Navbar({
   onToggleTheme
 }: NavbarProps) {
   const isDark = theme === 'dark';
+  const isAdmin = currentRole === 'ADMIN' || currentRole === 'SUPERADMIN';
+  const isDosen = currentRole === 'DOSEN';
 
   return (
     <header className={`h-16 px-4 flex items-center justify-between z-20 shrink-0 border-b shadow-md transition-colors ${
       isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
     }`} id="main-header">
       
-      {/* Left Section: Logo & System Brand + Secret Admin Trigger */}
+      {/* Left Section: Logo & System Brand */}
       <div className="flex items-center space-x-3">
         {onToggleSidebar && (
           <button
@@ -71,7 +81,7 @@ export default function Navbar({
           </button>
         )}
 
-        {/* Secret Trigger: Click on Logo Icon */}
+        {/* Secret / Role Trigger: Click on Logo Icon */}
         <button
           onClick={onOpenSecretAdmin}
           className="bg-teal-500/15 border border-teal-500/30 p-2 rounded-xl text-teal-400 font-bold shrink-0 shadow-sm hover:bg-teal-500/25 active:scale-95 transition-all cursor-pointer focus:outline-none"
@@ -94,18 +104,18 @@ export default function Navbar({
               </span>
             </h1>
             
-            {/* Dr. Penggalih credit badge */}
+            {/* Open Multi-Institusi info badge */}
             <span 
               onClick={onOpenAboutModal}
               className="text-[10px] font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full cursor-pointer hover:bg-indigo-500/25 transition-colors hidden md:inline-flex items-center gap-1"
-              title="Informasi Pengembang & Kurikulum"
+              title="Informasi Platform & Multi-Institusi"
             >
               <Sparkles className="w-3 h-3 text-indigo-400" />
-              <span>dikembangkan oleh dr. Penggalih</span>
+              <span>Multi-Institusi</span>
             </span>
           </div>
-          <p className="text-[10px] sm:text-xs text-slate-400">
-            Atlas Anatomi & Visualisasi Medis Digital 2D/3D
+          <p className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[200px] sm:max-w-none">
+            Atlas Anatomi 2D & 3D (FBX/OBJ/GLB/3DS)
           </p>
         </div>
       </div>
@@ -127,9 +137,26 @@ export default function Navbar({
         />
       </div>
 
-      {/* Right Section: Cluster Institusi, Dark/Light Mode, Superadmin shortcut, Login/Profile trigger */}
-      <div className="flex items-center space-x-2 sm:space-x-2.5">
+      {/* Right Section: Action Controls */}
+      <div className="flex items-center space-x-1.5 sm:space-x-2">
         
+        {/* Cloud & Localhost Installation Guide Button */}
+        {onOpenWindowsModal && (
+          <button
+            onClick={onOpenWindowsModal}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+              isDark
+                ? 'bg-teal-500/10 text-teal-300 border-teal-500/30 hover:bg-teal-500/20'
+                : 'bg-teal-50 text-teal-900 border-teal-300 hover:bg-teal-100'
+            }`}
+            title="Panduan Instalasi & Deployment di Cloud (Docker/VPS) atau Localhost (Port 3030)"
+            id="navbar-windows-btn"
+          >
+            <Server className="w-4 h-4 text-teal-400" />
+            <span className="hidden xl:inline">Instalasi (Cloud/Local)</span>
+          </button>
+        )}
+
         {/* Cluster Institusi View Button */}
         {onOpenClusterModal && (
           <button
@@ -143,7 +170,33 @@ export default function Navbar({
             id="navbar-cluster-btn"
           >
             <Building2 className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Cluster Institusi</span>
+            <span className="hidden lg:inline">Cluster FK</span>
+          </button>
+        )}
+
+        {/* Dosen / Admin: Tambah Konten 3D Button */}
+        {(isDosen || isAdmin) && onAddOrgan && (
+          <button
+            onClick={onAddOrgan}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold shadow-md hover:bg-amber-400 transition-all cursor-pointer shrink-0"
+            title="Tambah Konten 3D & Organ Baru"
+            id="navbar-add-3d-btn"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="hidden sm:inline">Tambah 3D</span>
+          </button>
+        )}
+
+        {/* Admin Console: Master Data Button */}
+        {isAdmin && onOpenSuperadminModal && (
+          <button
+            onClick={onOpenSuperadminModal}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500 text-white text-xs font-bold shadow-md hover:bg-rose-400 transition-all cursor-pointer shrink-0"
+            title="Kelola Master Data (Wewenang Admin)"
+            id="navbar-superadmin-btn"
+          >
+            <Crown className="w-4 h-4" />
+            <span className="hidden sm:inline">Master Data</span>
           </button>
         )}
 
@@ -161,50 +214,34 @@ export default function Navbar({
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
-        {/* Superadmin Console Button if Superadmin */}
-        {currentRole === 'SUPERADMIN' && onOpenSuperadminModal && (
-          <button
-            onClick={onOpenSuperadminModal}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500 text-white text-xs font-bold shadow-md hover:bg-rose-400 transition-all cursor-pointer shrink-0"
-            title="Buka Panel Master Data Superadmin"
-            id="navbar-superadmin-btn"
-          >
-            <Crown className="w-4 h-4" />
-            <span className="hidden sm:inline">Master Data</span>
-          </button>
-        )}
-
         {/* Role & User Login Trigger Button */}
         <button
           onClick={onOpenLoginModal}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm cursor-pointer ${
-            currentRole === 'SUPERADMIN'
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+            isAdmin
               ? 'bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25'
-              : currentRole === 'DOSEN'
+              : isDosen
               ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
-              : currentRole === 'MAHASISWA'
-              ? 'bg-teal-500/15 text-teal-400 border-teal-500/30 hover:bg-teal-500/25'
               : isDark 
-              ? 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+              ? 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800' 
               : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
           }`}
           id="navbar-auth-btn"
         >
-          {currentRole === 'SUPERADMIN' && <Crown className="w-4 h-4 text-rose-400 shrink-0" />}
-          {currentRole === 'DOSEN' && <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />}
-          {currentRole === 'MAHASISWA' && <GraduationCap className="w-4 h-4 text-teal-400 shrink-0" />}
-          {currentRole === 'GUEST' && <LogIn className="w-4 h-4 text-slate-400 shrink-0" />}
+          {isAdmin ? (
+            <Crown className="w-4 h-4 text-rose-400 shrink-0" />
+          ) : isDosen ? (
+            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+          ) : (
+            <LogIn className="w-4 h-4 text-slate-400 shrink-0" />
+          )}
 
           <div className="text-left hidden sm:block leading-tight">
-            <div className="text-[11px] font-bold">
-              {currentUser?.name || (currentRole === 'GUEST' ? 'Masuk / Login' : currentRole)}
+            <div className="text-[11px] font-bold truncate max-w-[120px]">
+              {currentUser?.name || (isAdmin ? 'Admin' : isDosen ? 'Dosen' : 'Masuk Akun')}
             </div>
-            <div className="text-[9px] opacity-75 font-mono">
-              {currentUser?.institution ? (
-                <span className="truncate max-w-[100px] inline-block">{currentUser.institution}</span>
-              ) : (
-                `Role: ${currentRole}`
-              )}
+            <div className="text-[9px] opacity-80 font-mono">
+              {isAdmin ? 'Admin (Master Data)' : isDosen ? 'Dosen (Konten 3D)' : 'Pilih Peran'}
             </div>
           </div>
         </button>

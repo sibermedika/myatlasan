@@ -2,25 +2,30 @@ import React, { useState } from 'react';
 import { 
   X, 
   ShieldCheck, 
-  Users, 
-  GraduationCap, 
-  Sparkles, 
-  Lock, 
-  KeyRound, 
+  Crown, 
   UserCheck, 
   CheckCircle2, 
   AlertCircle,
   Stethoscope,
-  Crown,
   Building2,
   BookOpen,
   UserPlus,
   LogIn,
   Eye,
-  EyeOff
+  EyeOff,
+  Sparkles,
+  KeyRound
 } from 'lucide-react';
 import { UserRole, UserProfile } from '../types';
-import { OFFICIAL_SUPERADMIN, DEFAULT_SUPERADMIN_PASSWORD, KNOWN_INSTITUTIONS, AnatomyDatabaseService } from '../services/db';
+import { 
+  OFFICIAL_SUPERADMIN, 
+  OFFICIAL_DOSEN,
+  DEFAULT_SUPERADMIN_PASSWORD, 
+  DEFAULT_ADMIN_PASSWORD,
+  DEFAULT_DOSEN_PASSWORD,
+  KNOWN_INSTITUTIONS, 
+  AnatomyDatabaseService 
+} from '../services/db';
 
 interface LoginModalProps {
   currentRole: UserRole;
@@ -39,18 +44,23 @@ export default function LoginModal({
   onLogout,
   theme
 }: LoginModalProps) {
-  const [selectedRoleTab, setSelectedRoleTab] = useState<UserRole>(
-    currentRole === 'GUEST' ? 'DOSEN' : currentRole
+  // Only two roles per user requirement: ADMIN and DOSEN
+  const [selectedRoleTab, setSelectedRoleTab] = useState<'ADMIN' | 'DOSEN'>(
+    currentRole === 'ADMIN' || currentRole === 'SUPERADMIN' ? 'ADMIN' : 'DOSEN'
   );
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   // Form Fields
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
+  const [emailInput, setEmailInput] = useState(
+    selectedRoleTab === 'ADMIN' ? 'admin' : 'dosen'
+  );
+  const [passwordInput, setPasswordInput] = useState(
+    selectedRoleTab === 'ADMIN' ? DEFAULT_ADMIN_PASSWORD : DEFAULT_DOSEN_PASSWORD
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [fullNameInput, setFullNameInput] = useState('');
-  const [identifierInput, setIdentifierInput] = useState(''); // NIM / NIDN / NIP
-  const [institutionInput, setInstitutionInput] = useState('Universitas Islam Sultan Agung (FK UNISSULA)');
+  const [identifierInput, setIdentifierInput] = useState(''); // NIDN / NIP
+  const [institutionInput, setInstitutionInput] = useState('Koleksi Mandiri / Terbuka');
   const [customInstitution, setCustomInstitution] = useState('');
   const [specializationInput, setSpecializationInput] = useState('Departemen Anatomi');
   const [errorMessage, setErrorMessage] = useState('');
@@ -58,51 +68,57 @@ export default function LoginModal({
 
   const isDark = theme === 'dark';
 
-  const handleSwitchRoleTab = (role: UserRole) => {
+  const handleSwitchRoleTab = (role: 'ADMIN' | 'DOSEN') => {
     setSelectedRoleTab(role);
     setErrorMessage('');
-    if (role === 'SUPERADMIN') {
-      setEmailInput(OFFICIAL_SUPERADMIN.email);
-      setPasswordInput(DEFAULT_SUPERADMIN_PASSWORD);
+    if (role === 'ADMIN') {
+      setEmailInput('admin');
+      setPasswordInput(DEFAULT_ADMIN_PASSWORD);
       setAuthMode('LOGIN');
     } else {
-      if (emailInput === OFFICIAL_SUPERADMIN.email) {
-        setEmailInput('');
-        setPasswordInput('');
-      }
+      setEmailInput('dosen');
+      setPasswordInput(DEFAULT_DOSEN_PASSWORD);
+      setAuthMode('LOGIN');
     }
   };
 
-  // Quick Superadmin Login (Production Credential)
-  const handleSuperadminQuickLogin = async () => {
+  // Quick 1-Click Login for Admin
+  const handleAdminQuickLogin = async () => {
     setIsSubmitting(true);
     try {
-      const auth = await AnatomyDatabaseService.authenticateUser(OFFICIAL_SUPERADMIN.email, DEFAULT_SUPERADMIN_PASSWORD);
+      const auth = await AnatomyDatabaseService.authenticateUser('admin', DEFAULT_ADMIN_PASSWORD);
       if (auth.success && auth.user) {
-        onLoginSuccess(auth.user);
+        onLoginSuccess({ ...auth.user, role: 'ADMIN' });
       } else {
-        await AnatomyDatabaseService.saveUser(OFFICIAL_SUPERADMIN);
-        onLoginSuccess(OFFICIAL_SUPERADMIN);
+        const adminProfile: UserProfile = { ...OFFICIAL_SUPERADMIN, role: 'ADMIN' };
+        await AnatomyDatabaseService.saveUser(adminProfile);
+        onLoginSuccess(adminProfile);
       }
     } catch (e) {
       console.error(e);
-      onLoginSuccess(OFFICIAL_SUPERADMIN);
+      onLoginSuccess({ ...OFFICIAL_SUPERADMIN, role: 'ADMIN' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Public Guest Mode Login
-  const handleGuestLogin = () => {
-    const guestUser: UserProfile = {
-      id: 'guest-public',
-      name: 'Tamu Non-Login (Akses Publik)',
-      email: 'tamu@anatomi.med.id',
-      role: 'GUEST',
-      identifierNumber: 'GUEST-FREE',
-      specialization: 'Akses Terbatas Organ Bebas PAAI'
-    };
-    onLoginSuccess(guestUser);
+  // Quick 1-Click Login for Dosen
+  const handleDosenQuickLogin = async () => {
+    setIsSubmitting(true);
+    try {
+      const auth = await AnatomyDatabaseService.authenticateUser('dosen', DEFAULT_DOSEN_PASSWORD);
+      if (auth.success && auth.user) {
+        onLoginSuccess(auth.user);
+      } else {
+        await AnatomyDatabaseService.saveUser(OFFICIAL_DOSEN);
+        onLoginSuccess(OFFICIAL_DOSEN);
+      }
+    } catch (e) {
+      console.error(e);
+      onLoginSuccess(OFFICIAL_DOSEN);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -110,12 +126,12 @@ export default function LoginModal({
     setErrorMessage('');
 
     if (!emailInput.trim()) {
-      setErrorMessage('Silakan masukkan alamat Email, NIM, NIDN, atau NIP.');
+      setErrorMessage('Silakan masukkan Username / Email / NIDN.');
       return;
     }
 
     if (!passwordInput.trim()) {
-      setErrorMessage('Silakan masukkan kata sandi akun.');
+      setErrorMessage('Silakan masukkan kata sandi.');
       return;
     }
 
@@ -131,54 +147,34 @@ export default function LoginModal({
           return;
         }
 
-        // Verify role consistency or adjust active role
         onLoginSuccess(authResult.user);
         return;
       }
 
-      // 2. REGISTER MODE: Create new account
+      // 2. REGISTER MODE: Create new Dosen account
       const finalInstitution = customInstitution.trim() || institutionInput.trim() || 'Koleksi Mandiri / Terbuka';
-
-      if (selectedRoleTab === 'DOSEN' && !finalInstitution) {
-        setErrorMessage('Asal Institusi / Universitas / Rumah Sakit Dosen wajib diisi.');
+      
+      if (!fullNameInput.trim()) {
+        setErrorMessage('Nama lengkap dokter / dosen wajib diisi.');
         setIsSubmitting(false);
         return;
       }
 
-      // Check if user with same email or identifier already exists
-      const existingUsers = await AnatomyDatabaseService.getAllUsers();
-      const duplicate = existingUsers.find(
-        u => u.email.toLowerCase() === emailInput.trim().toLowerCase() ||
-             (identifierInput.trim() && u.identifierNumber?.toLowerCase() === identifierInput.trim().toLowerCase())
-      );
-
-      if (duplicate) {
-        setErrorMessage(`Akun dengan email/identitas tersebut sudah terdaftar (${duplicate.name}). Silakan gunakan menu "Masuk".`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      const cleanName = (fullNameInput.trim() || emailInput.split('@')[0])
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 10);
-      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const autoDosenCode = `DSN-${cleanName || 'KONTRIBUTOR'}-${dateStr}`;
+      const cleanCode = identifierInput.trim().toUpperCase() || `DOSEN-${Math.floor(100 + Math.random() * 900)}`;
 
       const userProfile: UserProfile = {
-        id: `usr-${Date.now()}`,
-        name: fullNameInput.trim() || (selectedRoleTab === 'DOSEN' ? `Dosen ${emailInput.split('@')[0]}` : `Mahasiswa ${emailInput.split('@')[0]}`),
-        email: emailInput.trim().toLowerCase(),
-        password: passwordInput.trim(), // Save password to user object in IndexedDB
-        role: selectedRoleTab,
-        identifierNumber: identifierInput.trim() || (selectedRoleTab === 'DOSEN' ? 'NIDN/NIP Terverifikasi' : 'NIM Mahasiswa'),
+        id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        name: fullNameInput.trim(),
+        email: emailInput.trim(),
+        password: passwordInput.trim(),
+        role: 'DOSEN',
+        identifierNumber: identifierInput.trim() || cleanCode,
         institution: finalInstitution,
-        specialization: specializationInput.trim() || (selectedRoleTab === 'DOSEN' ? 'Departemen Anatomi Medis' : 'Pendidikan Dokter'),
-        dosenCode: selectedRoleTab === 'DOSEN' ? autoDosenCode : undefined,
+        specialization: specializationInput.trim() || 'Dosen Anatomi Klinis',
+        dosenCode: cleanCode,
         createdAt: new Date().toISOString()
       };
 
-      // Save to database
       await AnatomyDatabaseService.saveUser(userProfile);
       onLoginSuccess(userProfile);
     } catch (err) {
@@ -190,8 +186,8 @@ export default function LoginModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in" id="login-auth-modal">
-      <div className={`relative w-full max-w-xl rounded-2xl shadow-2xl border overflow-hidden flex flex-col max-h-[90vh] ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md animate-fade-in" id="login-auth-modal">
+      <div className={`relative w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden flex flex-col max-h-[90vh] ${
         isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         
@@ -205,13 +201,13 @@ export default function LoginModal({
             </div>
             <div>
               <h3 className="text-sm font-bold flex items-center gap-2">
-                Otentikasi Pengguna & Akses Role
+                Hak Akses Pengguna
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                  Production
+                  Admin & Dosen
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                Pilih peran untuk mengakses fitur kurikulum atau berkontribusi materi.
+                Pilih peran untuk mengelola master data atau konten 3D
               </p>
             </div>
           </div>
@@ -228,11 +224,10 @@ export default function LoginModal({
           <div className={`px-6 py-2.5 border-b flex items-center justify-between text-xs ${
             isDark ? 'bg-teal-950/30 border-slate-800 text-teal-300' : 'bg-teal-50 border-teal-200 text-teal-900'
           }`}>
-            <div className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-teal-400" />
-              <span>
+            <div className="flex items-center gap-2 truncate">
+              <UserCheck className="w-4 h-4 text-teal-400 shrink-0" />
+              <span className="truncate">
                 Sedang masuk sebagai <strong>{currentUser.name}</strong> ({currentUser.role})
-                {currentUser.institution && <span className="opacity-80"> • {currentUser.institution}</span>}
               </span>
             </div>
             {onLogout && (
@@ -241,22 +236,39 @@ export default function LoginModal({
                   onLogout();
                   onClose();
                 }}
-                className="text-xs underline text-rose-400 hover:text-rose-300 cursor-pointer"
+                className="text-xs underline text-rose-400 hover:text-rose-300 cursor-pointer shrink-0 ml-2"
               >
-                Keluar Akun
+                Keluar
               </button>
             )}
           </div>
         )}
 
-        {/* Role Tab Selector (Public: Dosen, Mahasiswa, Tamu) */}
-        <div className={`grid grid-cols-3 border-b text-xs font-bold ${
+        {/* Role Tab Selector: Strictly Admin & Dosen */}
+        <div className={`grid grid-cols-2 border-b text-xs font-bold ${
           isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-100 border-slate-200'
         }`}>
           <button
             type="button"
+            onClick={() => handleSwitchRoleTab('ADMIN')}
+            className={`py-3.5 px-3 flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
+              selectedRoleTab === 'ADMIN'
+                ? 'border-rose-500 text-rose-400 bg-rose-500/10'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+            id="tab-role-admin"
+          >
+            <Crown className="w-4 h-4" />
+            <div className="text-left">
+              <div className="text-xs font-bold">Admin</div>
+              <div className="text-[10px] font-normal opacity-80">Wewenang Master Data</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
             onClick={() => handleSwitchRoleTab('DOSEN')}
-            className={`py-3 px-2 flex flex-col items-center gap-1 border-b-2 transition-all cursor-pointer ${
+            className={`py-3.5 px-3 flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
               selectedRoleTab === 'DOSEN'
                 ? 'border-amber-500 text-amber-400 bg-amber-500/10'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -264,267 +276,230 @@ export default function LoginModal({
             id="tab-role-dosen"
           >
             <Stethoscope className="w-4 h-4" />
-            <span className="text-[11px]">Dosen</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSwitchRoleTab('MAHASISWA')}
-            className={`py-3 px-2 flex flex-col items-center gap-1 border-b-2 transition-all cursor-pointer ${
-              selectedRoleTab === 'MAHASISWA'
-                ? 'border-teal-500 text-teal-400 bg-teal-500/10'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-            id="tab-role-mahasiswa"
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span className="text-[11px]">Mahasiswa</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSwitchRoleTab('GUEST')}
-            className={`py-3 px-2 flex flex-col items-center gap-1 border-b-2 transition-all cursor-pointer ${
-              selectedRoleTab === 'GUEST'
-                ? 'border-slate-400 text-slate-200 bg-slate-800/40'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-            id="tab-role-guest"
-          >
-            <Users className="w-4 h-4" />
-            <span className="text-[11px]">Tamu (Free)</span>
+            <div className="text-left">
+              <div className="text-xs font-bold">Dosen</div>
+              <div className="text-[10px] font-normal opacity-80">Wewenang Konten 3D</div>
+            </div>
           </button>
         </div>
 
         {/* Tab Content Body */}
         <div className="p-5 space-y-4 overflow-y-auto">
           
-          {/* Role Benefit Card */}
+          {/* Role Authority & Benefit Card */}
           <div className={`rounded-xl p-3.5 border ${
-            selectedRoleTab === 'DOSEN'
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-              : selectedRoleTab === 'MAHASISWA'
-              ? 'bg-teal-500/10 border-teal-500/30 text-teal-300'
-              : 'bg-slate-800/50 border-slate-700 text-slate-300'
+            selectedRoleTab === 'ADMIN'
+              ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
           }`}>
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span className="text-xs font-bold">
-                {selectedRoleTab === 'DOSEN' && 'Dosen Kontributor: Upload Objek 2D/3D & Pengelompokan Asal Institusi'}
-                {selectedRoleTab === 'MAHASISWA' && 'Mahasiswa Kedokteran: Akses Kurikulum Lengkap 87+ Topik'}
-                {selectedRoleTab === 'GUEST' && 'Mode Tamu (Guest): Akses Organ Pengantar & Jantung Gratis'}
+                {selectedRoleTab === 'ADMIN' && 'Wewenang Admin: Mengedit Master Data'}
+                {selectedRoleTab === 'DOSEN' && 'Wewenang Dosen: Menambah, Menghapus & Mengedit Konten 3D'}
               </span>
             </div>
             <p className="text-[11px] leading-relaxed opacity-90">
-              {selectedRoleTab === 'DOSEN' && 'Dosen dapat mengunggah file 2D (JPG/PNG) & 3D (GLB/OBJ/STL/FBX), menambahkan sub-kategori unik dengan Kode Dosen, dan mencantumkan asal institusi/universitas.'}
-              {selectedRoleTab === 'MAHASISWA' && 'Eksplorasi interaktif seluruh sistem anatomi, pin spasial 2D/3D, vaskularisasi, inervasi, dan korelasi klinis.'}
-              {selectedRoleTab === 'GUEST' && 'Akses publik tanpa login untuk sampel organ bebas. Masuk akun untuk membuka seluruh materi.'}
+              {selectedRoleTab === 'ADMIN' && 'Admin mengendalikan taksonomi kurikulum nasional PAAI 2019, daftar sistem organ tubuh, daftar institusi universitas, manajemen akun dosen, serta impor/ekspor dan reset basis data.'}
+              {selectedRoleTab === 'DOSEN' && 'Dosen memiliki kewenangan penuh untuk mengunggah dan memperbarui objek anatomi 3D (FBX, OBJ, GLB, 3DS), mengunggah folder kontur, menghapus konten 3D, menyematkan embed Sketchfab/GDrive, serta menambahkan penanda pin spasial 3D.'}
             </p>
           </div>
 
-          {/* Special Guest Mode View */}
-          {selectedRoleTab === 'GUEST' && (
-            <div className="text-center py-4 space-y-3">
-              <p className="text-xs text-slate-300">
-                Gunakan mode ini untuk mencoba tampilan atlas anatomi dengan akses terbatas (organ pengantar).
-              </p>
-              <button
-                type="button"
-                onClick={handleGuestLogin}
-                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white shadow-md transition-all cursor-pointer inline-flex items-center gap-2"
-                id="btn-guest-access"
-              >
-                <Users className="w-4 h-4" />
-                Lanjutkan Sebagai Tamu Non-Login
-              </button>
+          {/* Quick 1-Click Login Card */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="text-xs">
+              <div className="font-bold flex items-center gap-1.5 text-teal-400">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Masuk Cepat 1-Klik</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {selectedRoleTab === 'ADMIN' ? 'User: admin (Admin Master Data)' : 'User: dosen (dr. Paijo)'}
+              </span>
             </div>
-          )}
 
-          {/* Dosen & Mahasiswa Login / Register Form */}
-          {(selectedRoleTab === 'DOSEN' || selectedRoleTab === 'MAHASISWA') && (
-            <form onSubmit={handleFormSubmit} className="space-y-3 pt-1">
-              
-              {/* Toggle Mode: Masuk vs Daftar Akun Baru */}
+            <button
+              type="button"
+              onClick={selectedRoleTab === 'ADMIN' ? handleAdminQuickLogin : handleDosenQuickLogin}
+              disabled={isSubmitting}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-950 shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 ${
+                selectedRoleTab === 'ADMIN' ? 'bg-rose-400 hover:bg-rose-300' : 'bg-amber-400 hover:bg-amber-300'
+              }`}
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Masuk Sebagai {selectedRoleTab === 'ADMIN' ? 'Admin' : 'Dosen'}</span>
+            </button>
+          </div>
+
+          {/* Login / Register Form */}
+          <form onSubmit={handleFormSubmit} className="space-y-3 pt-1">
+            
+            {/* Toggle Mode: Masuk vs Daftar Akun Baru (Dosen only) */}
+            {selectedRoleTab === 'DOSEN' && (
               <div className="flex items-center justify-between pb-1">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                  {authMode === 'LOGIN' ? 'Formulir Masuk Akun:' : 'Pendaftaran Akun Baru:'}
+                  {authMode === 'LOGIN' ? 'Masuk dengan Akun Dosen:' : 'Daftarkan Akun Dosen Baru:'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setAuthMode(prev => prev === 'LOGIN' ? 'REGISTER' : 'LOGIN')}
-                  className="text-xs text-teal-400 hover:text-teal-300 underline font-medium cursor-pointer"
+                  className="text-xs text-amber-400 hover:text-amber-300 underline font-medium cursor-pointer"
                 >
-                  {authMode === 'LOGIN' ? '+ Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
+                  {authMode === 'LOGIN' ? '+ Daftar Akun Dosen Baru' : 'Sudah punya akun? Masuk'}
                 </button>
               </div>
+            )}
 
-              {errorMessage && (
-                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-              {/* Full Name & Identifier (Register Mode) */}
-              {authMode === 'REGISTER' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                      Nama Lengkap & Gelar *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={selectedRoleTab === 'DOSEN' ? 'dr. Ahmad Sp.A / dr. Siti M.Biomed' : 'Nama Mahasiswa S.Ked'}
-                      value={fullNameInput}
-                      onChange={(e) => setFullNameInput(e.target.value)}
-                      className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-teal-500 ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                      {selectedRoleTab === 'DOSEN' ? 'NIDN / NIP Dosen' : 'NIM Mahasiswa'}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={selectedRoleTab === 'DOSEN' ? '0628088901' : '30102100458'}
-                      value={identifierInput}
-                      onChange={(e) => setIdentifierInput(e.target.value)}
-                      className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-teal-500 ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* FIELD KHUSUS DOSEN: ASAL INSTITUSI / UNIVERSITAS / RS PENDIDIKAN */}
-              {selectedRoleTab === 'DOSEN' && (
-                <div className="p-3 rounded-xl border bg-amber-500/5 border-amber-500/25 space-y-2">
-                  <label className="block text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                    Asal Institusi / Universitas / RS Pendidikan Dosen *
-                  </label>
-                  
-                  <select
-                    value={institutionInput}
-                    onChange={(e) => {
-                      setInstitutionInput(e.target.value);
-                      if (e.target.value !== 'OTHER') {
-                        setCustomInstitution('');
-                      }
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  >
-                    {KNOWN_INSTITUTIONS.map((inst) => (
-                      <option key={inst} value={inst}>{inst}</option>
-                    ))}
-                    <option value="OTHER">+ Tulis Institusi / Universitas Lain...</option>
-                  </select>
-
-                  {institutionInput === 'OTHER' && (
-                    <input
-                      type="text"
-                      required
-                      placeholder="Masukkan nama Fakultas Kedokteran / Universitas / Rumah Sakit..."
-                      value={customInstitution}
-                      onChange={(e) => setCustomInstitution(e.target.value)}
-                      className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  )}
-                  <p className="text-[10px] text-slate-400">
-                    Informasi ini akan dicantumkan pada seluruh materi dan cluster koleksi institusi Anda.
-                  </p>
-                </div>
-              )}
-
-              {/* Email / Identifier & Password */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Registration specific fields */}
+            {authMode === 'REGISTER' && selectedRoleTab === 'DOSEN' && (
+              <>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                    {authMode === 'LOGIN' ? 'Email / NIM / NIDN / NIP *' : 'Alamat Email Kampus / Pribadi *'}
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    Nama Lengkap & Gelar Dosen *
                   </label>
                   <input
-                    type={authMode === 'LOGIN' ? 'text' : 'email'}
+                    type="text"
                     required
-                    placeholder={authMode === 'LOGIN' ? 'nama@fk.unissula.ac.id / NIM / NIDN' : 'nama@fk.unissula.ac.id'}
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:border-teal-500 ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
+                    value={fullNameInput}
+                    onChange={(e) => setFullNameInput(e.target.value)}
+                    placeholder="misal: dr. Ahmad, Sp.Rad"
+                    className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300'
                     }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                    Kata Sandi *
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    NIDN / NIP / Kode Dosen
                   </label>
-                  <div className="relative">
+                  <input
+                    type="text"
+                    value={identifierInput}
+                    onChange={(e) => setIdentifierInput(e.target.value)}
+                    placeholder="misal: DOSEN-002 atau 06123456"
+                    className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    Asal Institusi / Universitas Dosen *
+                  </label>
+                  <select
+                    value={institutionInput}
+                    onChange={(e) => setInstitutionInput(e.target.value)}
+                    className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300'
+                    }`}
+                  >
+                    {KNOWN_INSTITUTIONS.map(inst => (
+                      <option key={inst} value={inst}>{inst}</option>
+                    ))}
+                    <option value="LAINNYA">+ Institusi / Universitas Lainnya...</option>
+                  </select>
+                  {institutionInput === 'LAINNYA' && (
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type="text"
                       required
-                      placeholder="••••••••"
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      className={`w-full rounded-lg border pl-3 pr-9 py-2 text-xs focus:outline-none focus:border-teal-500 ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
+                      value={customInstitution}
+                      onChange={(e) => setCustomInstitution(e.target.value)}
+                      placeholder="Ketikkan nama Institusi / FK Universitas..."
+                      className={`w-full mt-2 rounded-xl border px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
+                        isDark ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300'
                       }`}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                      title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  )}
                 </div>
-              </div>
+              </>
+            )}
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3">
+            {/* Email / Username Field */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                Username / Email / Kode
+              </label>
+              <input
+                type="text"
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder={selectedRoleTab === 'ADMIN' ? 'admin' : 'dosen atau email...'}
+                className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none focus:border-teal-500 ${
+                  isDark ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300'
+                }`}
+                id="login-username-input"
+              />
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                Kata Sandi
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="••••••••"
+                  className={`w-full rounded-xl border pl-3 pr-9 py-2 text-xs focus:outline-none focus:border-teal-500 ${
+                    isDark ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300'
+                  }`}
+                  id="login-password-input"
+                />
                 <button
                   type="button"
-                  onClick={onClose}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                    isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                  }`}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
                 >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 ${
-                    selectedRoleTab === 'DOSEN'
-                      ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
-                      : 'bg-teal-500 text-slate-950 hover:bg-teal-400'
-                  }`}
-                  id="submit-auth-btn"
-                >
-                  {authMode === 'LOGIN' ? <LogIn className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                  {authMode === 'LOGIN' ? 'Masuk ke Akun' : `Daftar & Masuk ${selectedRoleTab}`}
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
-            </form>
-          )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
+                  isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                }`}
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-500 text-slate-950 hover:bg-teal-400 shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                id="login-submit-btn"
+              >
+                {authMode === 'REGISTER' ? <UserPlus className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+                <span>{authMode === 'REGISTER' ? 'Daftarkan Akun' : 'Masuk Sekarang'}</span>
+              </button>
+            </div>
+          </form>
 
         </div>
 
-        {/* Modal Footer Credits */}
-        <div className={`px-6 py-2.5 border-t text-[10px] text-center font-mono ${
-          isDark ? 'bg-slate-950/80 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-500'
+        {/* Modal Footer */}
+        <div className={`border-t px-6 py-3 flex items-center justify-between text-[11px] text-slate-400 ${
+          isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
         }`}>
-          Dikembangkan oleh dr. Penggalih • Standar Kurikulum PAAI 2019
+          <span>PAAI 2019 Curriculum Engine</span>
+          <span className="font-mono text-teal-400">Localhost :3030</span>
         </div>
 
       </div>

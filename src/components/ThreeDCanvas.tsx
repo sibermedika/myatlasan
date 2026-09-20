@@ -7,6 +7,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { TDSLoader } from 'three/examples/jsm/loaders/TDSLoader.js';
 import * as fflate from 'fflate';
 
 import { Organ, Pin, UserRole, Model3DPreset, StoredBundleFile } from '../types';
@@ -978,6 +979,62 @@ export default function ThreeDCanvas({
       }
 
       throw new Error('Sumber berkas STL tidak valid.');
+
+    // ==========================================
+    // 5. 3DS Format (.3ds / 3D Studio - TDSLoader)
+    // ==========================================
+    } else if (
+      normalizedFormat === '3ds' ||
+      normalizedFormat === 'tds' ||
+      (typeof source === 'string' && source.endsWith('.3ds'))
+    ) {
+      const tdsLoader = new TDSLoader();
+
+      const processTdsObject = (object: THREE.Object3D) => {
+        object.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            if (wireframe && mesh.material) {
+              if (Array.isArray(mesh.material)) {
+                mesh.material.forEach((m: any) => { if ('wireframe' in m) m.wireframe = true; });
+              } else if ('wireframe' in (mesh.material as any)) {
+                (mesh.material as any).wireframe = true;
+              }
+            }
+          }
+        });
+        normalizeAndCenterModel(object);
+        group.add(object);
+        return group;
+      };
+
+      if (source instanceof ArrayBuffer) {
+        const object = tdsLoader.parse(source, '');
+        return processTdsObject(object);
+      }
+
+      if (source instanceof Blob) {
+        const buffer = await source.arrayBuffer();
+        const object = tdsLoader.parse(buffer, '');
+        return processTdsObject(object);
+      }
+
+      if (typeof source === 'string') {
+        return new Promise<THREE.Group>((resolve, reject) => {
+          tdsLoader.load(
+            source,
+            (object) => resolve(processTdsObject(object)),
+            (xhr) => {
+              if (xhr.total > 0) setLoadProgress(Math.round((xhr.loaded / xhr.total) * 100));
+            },
+            (err: any) => reject(new Error(`Gagal membaca berkas 3DS: ${err?.message || 'Format 3DS tidak valid'}`))
+          );
+        });
+      }
+
+      throw new Error('Sumber berkas 3DS tidak valid.');
     } else {
       throw new Error(`Format 3D '${normalizedFormat}' belum didukung.`);
     }

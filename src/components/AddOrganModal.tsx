@@ -27,6 +27,7 @@ import {
   FileText
 } from 'lucide-react';
 import * as fflate from 'fflate';
+import { normalizeEmbedUrl } from '../utils/embedHelper';
 import { Organ, MediaType, Model3DPreset, UserProfile, Supported3DFormat, OrganMediaItem, StoredBundleFile } from '../types';
 import { KNOWN_INSTITUTIONS, KNOWN_STANDARDS, DEFAULT_STANDARD, AnatomyDatabaseService } from '../services/db';
 
@@ -638,19 +639,27 @@ export default function AddOrganModal({
     }
   };
 
-  // Handle setting Embed URL
-  const handleEmbedUrlChange = (urlValue: string, title?: string) => {
-    setEmbed3dUrl(urlValue);
+  // Handle setting Embed URL (Sketchfab & Google Drive)
+  const handleEmbedUrlChange = (urlValue: string, customTitle?: string) => {
+    const embedInfo = normalizeEmbedUrl(urlValue);
+    const resolvedUrl = embedInfo.isValid ? embedInfo.normalizedEmbedUrl : urlValue;
+    setEmbed3dUrl(resolvedUrl);
     if (!urlValue) return;
+
+    const resolvedTitle = customTitle || (
+      embedInfo.sourceType === 'sketchfab' ? 'Sketchfab 3D Embed' :
+      embedInfo.sourceType === 'google_drive' ? 'Google Drive Embed Preview' :
+      'Embed 2D/3D Interaktif'
+    );
 
     setAttachedMediaList(prev => {
       const copy = [...prev];
       const existingIdx = copy.findIndex(m => m.type === '3d_embed');
       const newItem: OrganMediaItem = {
         id: existingIdx >= 0 ? copy[existingIdx].id : `media-embed-${Date.now()}`,
-        title: title || 'Embed 3D Interaktif (Web Viewer)',
+        title: resolvedTitle,
         type: '3d_embed',
-        url: urlValue,
+        url: resolvedUrl,
         isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
       };
       if (existingIdx >= 0) copy[existingIdx] = newItem;
@@ -826,7 +835,7 @@ export default function AddOrganModal({
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: dr. Penggalih Mahardika, M.Med.Ed"
+                  placeholder="Contoh: dr. Paijo, Sp.A / dr. Nama Dosen"
                   value={dosenName}
                   onChange={(e) => {
                     setDosenName(e.target.value);
@@ -1106,10 +1115,10 @@ export default function AddOrganModal({
                     <span className="text-[11px] text-slate-300 font-medium text-center truncate max-w-[170px]">
                       {model3dFileName || 'Upload Berkas 3D Tunggal'}
                     </span>
-                    <span className="text-[9px] text-slate-500">.glb, .gltf, .obj, .stl, .fbx</span>
+                    <span className="text-[9px] text-slate-400 font-mono">.fbx, .obj, .glb, .3ds</span>
                     <input
                       type="file"
-                      accept=".glb, .gltf, .obj, .stl, .fbx, model/gltf-binary"
+                      accept=".glb, .gltf, .obj, .stl, .fbx, .3ds, model/gltf-binary"
                       onChange={handle3DFileUpload}
                       className="hidden"
                     />
@@ -1208,24 +1217,33 @@ export default function AddOrganModal({
               }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-teal-300 flex items-center gap-1">
-                    <LinkIcon className="w-3.5 h-3.5" /> 3. 3D Embed (Sketchfab)
+                    <LinkIcon className="w-3.5 h-3.5" /> 3. Embed (Sketchfab / Google Drive)
                   </span>
-                  <span className="text-[9px] font-mono text-slate-400">Iframe URL</span>
+                  <span className="text-[9px] font-mono text-slate-400">2D / 3D</span>
                 </div>
 
-                <input
-                  type="url"
-                  placeholder="https://sketchfab.com/models/.../embed"
-                  value={embed3dUrl}
-                  onChange={(e) => handleEmbedUrlChange(e.target.value)}
-                  className={`w-full rounded border px-2 py-1.5 text-xs focus:outline-none focus:border-teal-500 ${
-                    isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-300'
-                  }`}
-                />
+                <div className="space-y-1">
+                  <input
+                    type="url"
+                    placeholder="Tempel link Sketchfab atau Google Drive..."
+                    value={embed3dUrl}
+                    onChange={(e) => handleEmbedUrlChange(e.target.value)}
+                    className={`w-full rounded border px-2 py-1.5 text-xs focus:outline-none focus:border-teal-500 ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-300'
+                    }`}
+                  />
+                  {embed3dUrl && (
+                    <div className="text-[9px] font-mono text-teal-400 truncate">
+                      {embed3dUrl.includes('sketchfab') ? '✓ Terdeteksi: Sketchfab 3D Embed' :
+                       embed3dUrl.includes('drive.google.com') ? '✓ Terdeteksi: Google Drive Embed Preview' :
+                       '✓ Embed Link Aktif'}
+                    </div>
+                  )}
+                </div>
 
-                {/* Sketchfab Preset Buttons */}
+                {/* Preset Embed Buttons */}
                 <div>
-                  <span className="text-[9px] font-mono text-slate-400 block mb-1">Preset Embed:</span>
+                  <span className="text-[9px] font-mono text-slate-400 block mb-1">Preset Cepat:</span>
                   <div className="flex flex-wrap gap-1">
                     {PRESET_EMBED_3D.slice(0, 2).map((p) => (
                       <button
@@ -1233,10 +1251,19 @@ export default function AddOrganModal({
                         type="button"
                         onClick={() => handleEmbedUrlChange(p.url, p.name)}
                         className="text-[9px] px-1.5 py-0.5 rounded border border-slate-800 bg-slate-950 text-slate-300 hover:text-teal-300 cursor-pointer"
+                        title="Model 3D Sketchfab"
                       >
                         {p.name.split(' ')[1] || p.name.split(' ')[0]}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => handleEmbedUrlChange('https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/preview', 'Google Drive Sample Embed')}
+                      className="text-[9px] px-1.5 py-0.5 rounded border border-slate-800 bg-slate-950 text-slate-300 hover:text-teal-300 cursor-pointer"
+                      title="Google Drive Preview Embed"
+                    >
+                      GDrive Preview
+                    </button>
                   </div>
                 </div>
               </div>

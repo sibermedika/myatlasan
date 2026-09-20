@@ -27,6 +27,7 @@ import SecretAdminModal from './components/SecretAdminModal';
 import SuperadminDashboard from './components/SuperadminDashboard';
 import InstitutionClusterView from './components/InstitutionClusterView';
 import AboutModal from './components/AboutModal';
+import WindowsInstallModal from './components/WindowsInstallModal';
 
 export default function App() {
   // 1. Theme state ('dark' | 'light')
@@ -137,6 +138,7 @@ export default function App() {
   const [showSuperadminDashboard, setShowSuperadminDashboard] = useState(false);
   const [showClusterModal, setShowClusterModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showWindowsModal, setShowWindowsModal] = useState(false);
   const [showAddOrganModal, setShowAddOrganModal] = useState(false);
   const [editingOrgan, setEditingOrgan] = useState<Organ | null>(null);
 
@@ -358,6 +360,11 @@ export default function App() {
         onOpenSecretAdmin={() => setShowSecretAdminModal(true)}
         onOpenClusterModal={() => setShowClusterModal(true)}
         onOpenAboutModal={() => setShowAboutModal(true)}
+        onOpenWindowsModal={() => setShowWindowsModal(true)}
+        onAddOrgan={() => {
+          setEditingOrgan(null);
+          setShowAddOrganModal(true);
+        }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onResetData={handleResetMasterData}
@@ -380,7 +387,7 @@ export default function App() {
               setEditingOrgan(null);
               setShowAddOrganModal(true);
             }}
-            onOpenSuperadmin={role === 'SUPERADMIN' ? () => setShowSuperadminDashboard(true) : undefined}
+            onOpenSuperadmin={(role === 'SUPERADMIN' || role === 'ADMIN') ? () => setShowSuperadminDashboard(true) : undefined}
             theme={theme}
           />
         </aside>
@@ -420,6 +427,11 @@ export default function App() {
             currentRole={role}
             onEditPin={(pin) => setEditingPin(pin)}
             onDeletePin={handleDeletePin}
+            onEditOrgan={(organ) => {
+              setEditingOrgan(organ);
+              setShowAddOrganModal(true);
+            }}
+            onDeleteOrgan={handleDeleteOrgan}
             theme={theme}
           />
         </aside>
@@ -437,10 +449,23 @@ export default function App() {
             currentRole={role}
             onEditPin={(pin) => setEditingPin(pin)}
             onDeletePin={handleDeletePin}
+            onEditOrgan={(organ) => {
+              setEditingOrgan(organ);
+              setShowAddOrganModal(true);
+            }}
+            onDeleteOrgan={handleDeleteOrgan}
             theme={theme}
           />
         </div>
       </div>
+
+      {/* MODAL: Windows Localhost 3030 Installation Guide */}
+      {showWindowsModal && (
+        <WindowsInstallModal
+          onClose={() => setShowWindowsModal(false)}
+          theme={theme}
+        />
+      )}
 
       {/* MODAL 1: Role-Based Authentication Modal */}
       {showLoginModal && (
@@ -553,7 +578,7 @@ export default function App() {
         />
       )}
 
-      {/* MODAL 8: About & Dr. Penggalih Credit Modal */}
+      {/* MODAL 8: About & Multi-Institution Info Modal */}
       {showAboutModal && (
         <AboutModal
           onClose={() => setShowAboutModal(false)}
@@ -646,7 +671,7 @@ export default function App() {
                   setShowAddOrganModal(true);
                   setShowSidebarMobile(false);
                 }}
-                onOpenSuperadmin={role === 'SUPERADMIN' ? () => {
+                onOpenSuperadmin={(role === 'SUPERADMIN' || role === 'ADMIN') ? () => {
                   setShowSuperadminDashboard(true);
                   setShowSidebarMobile(false);
                 } : undefined}

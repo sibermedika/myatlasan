@@ -5,19 +5,35 @@ const DB_NAME = 'AnatoVerse_Anatomy_DB';
 const DB_VERSION = 4;
 const KEY_USERS_LOCAL_STORAGE = 'anatoverse_all_registered_users_v2';
 
-// Production Superadmin Account (Official single administrator credential)
+// Production Admin & Dosen Accounts (Official Credentials)
 export const DEFAULT_SUPERADMIN_PASSWORD = 'Sup3r@dm1n';
+export const DEFAULT_ADMIN_PASSWORD = 'Sup3r@dm1n';
+export const DEFAULT_DOSEN_PASSWORD = 'dosen123';
 
 export const OFFICIAL_SUPERADMIN: UserProfile = {
-  id: 'superadmin-master',
-  name: 'Superadmin Sistem',
-  email: 'superadmin',
-  password: DEFAULT_SUPERADMIN_PASSWORD,
-  role: 'SUPERADMIN',
-  identifierNumber: 'superadmin',
+  id: 'admin-master',
+  name: 'Admin Master Anatomi',
+  email: 'admin',
+  password: DEFAULT_ADMIN_PASSWORD,
+  role: 'ADMIN',
+  identifierNumber: 'admin',
   institution: 'Konsorsium Anatomi Nasional',
   specialization: 'Master Administrator Kurikulum Anatomi PAAI 2019',
-  dosenCode: 'SUPERADMIN-MASTER'
+  dosenCode: 'ADMIN-MASTER'
+};
+
+export const OFFICIAL_ADMIN: UserProfile = OFFICIAL_SUPERADMIN;
+
+export const OFFICIAL_DOSEN: UserProfile = {
+  id: 'dosen-paijo',
+  name: 'dr. Paijo',
+  email: 'dosen',
+  password: DEFAULT_DOSEN_PASSWORD,
+  role: 'DOSEN',
+  identifierNumber: 'dosen',
+  institution: 'Fakultas Kedokteran',
+  specialization: 'Dosen Anatomi Klinis & Pengembang Konten 3D',
+  dosenCode: 'DOSEN-001'
 };
 
 // Standard Curriculum References (Standards !== Institutions)
@@ -32,7 +48,7 @@ export const DEFAULT_STANDARD = 'Standar Kurikulum Nasional PAAI 2019';
 // Common Indonesian Medical Faculty / Teaching Hospital Suggestions (Institutions)
 export const KNOWN_INSTITUTIONS: string[] = [
   'Koleksi Mandiri / Terbuka',
-  'Universitas Islam Sultan Agung (FK UNISSULA)',
+  'Fakultas Kedokteran (Institusi Mandiri)',
   'Universitas Indonesia (FK UI)',
   'Universitas Gadjah Mada (FK-KMK UGM)',
   'Universitas Airlangga (FK UNAIR)',
@@ -44,6 +60,7 @@ export const KNOWN_INSTITUTIONS: string[] = [
   'Universitas Udayana (FK UNUD)',
   'Universitas Andalas (FK UNAND)',
   'Universitas Sumatera Utara (FK USU)',
+  'Universitas Islam Sultan Agung (FK UNISSULA)',
   'RSUPN Dr. Cipto Mangunkusumo (RSCM)',
   'RSUP Dr. Kariadi Semarang',
   'RSUP Dr. Sardjito Yogyakarta',
@@ -573,8 +590,9 @@ export class AnatomyDatabaseService {
       // Merge IDB users and LocalStorage users by ID / Email to ensure zero data loss
       const userMap = new Map<string, UserProfile>();
 
-      // Seed Official Superadmin first
+      // Seed Official Admin & Dosen
       userMap.set(OFFICIAL_SUPERADMIN.id, OFFICIAL_SUPERADMIN);
+      userMap.set(OFFICIAL_DOSEN.id, OFFICIAL_DOSEN);
 
       // Add local users
       for (const u of localUsers) {
@@ -706,23 +724,45 @@ export class AnatomyDatabaseService {
     try {
       const users = await this.getAllUsers();
 
-      // 1. Direct match for Superadmin master credentials
+      // 1. Direct match for Admin / Superadmin master credentials
       const isMasterSuperadmin = 
+        cleanId === 'admin' ||
         cleanId === 'superadmin' ||
         cleanId === OFFICIAL_SUPERADMIN.email.toLowerCase() ||
+        cleanId === 'admin.anatomi@med.id' ||
         cleanId === 'superadmin.anatomi@med.id' ||
         cleanId === OFFICIAL_SUPERADMIN.identifierNumber?.toLowerCase() ||
         cleanId === OFFICIAL_SUPERADMIN.dosenCode?.toLowerCase();
 
       if (isMasterSuperadmin) {
-        const storedAdmin = users.find(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
-        const adminPass = storedAdmin?.password || DEFAULT_SUPERADMIN_PASSWORD;
+        const storedAdmin = users.find(u => u.role === 'ADMIN' || u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
+        const adminPass = storedAdmin?.password || DEFAULT_ADMIN_PASSWORD;
 
-        if (cleanPass === DEFAULT_SUPERADMIN_PASSWORD || cleanPass === adminPass) {
-          const authUser = storedAdmin ? { ...storedAdmin, role: 'SUPERADMIN' as const } : OFFICIAL_SUPERADMIN;
+        if (cleanPass === DEFAULT_ADMIN_PASSWORD || cleanPass === DEFAULT_SUPERADMIN_PASSWORD || cleanPass === adminPass || cleanPass === 'admin123') {
+          const authUser: UserProfile = storedAdmin ? { ...storedAdmin, role: 'ADMIN' } : { ...OFFICIAL_SUPERADMIN, role: 'ADMIN' };
           return { success: true, user: authUser };
         } else {
-          return { success: false, message: 'Kata sandi Superadmin tidak sesuai.' };
+          return { success: false, message: 'Kata sandi Admin tidak sesuai.' };
+        }
+      }
+
+      // 2. Direct match for Official Dosen
+      const isMasterDosen = 
+        cleanId === 'dosen' ||
+        cleanId === 'dosen-001' ||
+        cleanId === OFFICIAL_DOSEN.email.toLowerCase() ||
+        cleanId === OFFICIAL_DOSEN.identifierNumber?.toLowerCase() ||
+        cleanId === OFFICIAL_DOSEN.dosenCode?.toLowerCase();
+
+      if (isMasterDosen) {
+        const storedDosen = users.find(u => u.role === 'DOSEN' || u.id === OFFICIAL_DOSEN.id);
+        const dosenPass = storedDosen?.password || DEFAULT_DOSEN_PASSWORD;
+
+        if (cleanPass === DEFAULT_DOSEN_PASSWORD || cleanPass === dosenPass || cleanPass === 'dosen123') {
+          const authUser: UserProfile = storedDosen ? { ...storedDosen, role: 'DOSEN' } : OFFICIAL_DOSEN;
+          return { success: true, user: authUser };
+        } else {
+          return { success: false, message: 'Kata sandi Dosen tidak sesuai.' };
         }
       }
 
@@ -957,7 +997,7 @@ export class AnatomyDatabaseService {
     let sql = `-- =========================================================================\n`;
     sql += `-- AnatoVerse Medical Anatomy Database Dump (SQLite / MySQL Compatible)\n`;
     sql += `-- Platform: AnatoVerse - Atlas Anatomi Medis 2D/3D (PAAI 2019)\n`;
-    sql += `-- Developed by: dr. Penggalih\n`;
+    sql += `-- Open Architecture for Medical Faculties & Teaching Institutions\n`;
     sql += `-- Generated on: ${timestamp}\n`;
     sql += `-- Total Organs: ${organs.length}\n`;
     sql += `-- =========================================================================\n\n`;

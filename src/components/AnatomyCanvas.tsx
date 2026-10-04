@@ -20,7 +20,7 @@ import { Organ, Pin, UserRole, OrganMediaItem } from '../types';
 import { canManageContent } from '../permissions';
 import { AnatomyDatabaseService } from '../services/db';
 import { imagePoint, pinMediaId, pinsForMedia, annotationShortcut, type AnnotationPosition } from '../utils/annotations';
-const ThreeDCanvas = React.lazy(() => import('./ThreeDCanvas'));
+import ThreeDCanvas from './ThreeDCanvas';
 import { ThreeDErrorBoundary } from './ThreeDErrorBoundary';
 import EmbedCanvas from './EmbedCanvas';
 

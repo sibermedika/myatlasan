@@ -36,7 +36,7 @@ export function createApi({ directory, seed = [], adminPassword, lecturerPasswor
   const canRead = readOrgan;
   const transaction = fn => { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (e) { db.exec('ROLLBACK'); throw e; } };
   if (!db.prepare('SELECT id FROM users LIMIT 1').get()) {
-    const credentials = { admin: adminPassword || randomBytes(18).toString('base64url'), dosen: lecturerPassword || randomBytes(18).toString('base64url') };
+    const credentials = { admin: adminPassword || 'admin', dosen: lecturerPassword || randomBytes(18).toString('base64url') };
     for (const [id, email, name, role] of [['admin-master', 'admin', 'Administrator', 'ADMIN'], ['dosen-paijo', 'dosen', 'Dosen', 'DOSEN']]) {
       db.prepare('INSERT INTO users VALUES(?,?,?)').run(id, JSON.stringify({ id, email, name, role, institution: 'Institusi Mandiri', identifierNumber: email }), passwordHash(credentials[email]));
     }

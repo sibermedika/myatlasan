@@ -11,7 +11,7 @@ npm.cmd run dev:local
 
 Buka http://localhost:3030. Perintah ini menjalankan Vite pada port 3030 dan API pada 3031. Kedua proses berhenti bersama. Server mendengarkan localhost secara default.
 
-Saat pertama kali database dibuat, username `admin` dan `dosen` mendapatkan kata sandi acak. Baca `data/bootstrap-accounts.txt` di komputer ini. Berkas tersebut tidak masuk Git. Kata sandi lama yang tertanam di frontend sudah tidak berlaku. Admin dapat membuat akun dosen dan mahasiswa melalui `/admin/pengguna`.
+Pada instalasi baru, masuk menggunakan **username `admin` dan password `admin`**. Akun dosen mendapatkan password acak yang tercatat di `data/bootstrap-accounts.txt`; berkas tersebut tidak masuk Git. Akun awal dibuat otomatis saat database pertama dibuat, sehingga clone GitHub di komputer lain dapat langsung digunakan setelah `npm.cmd ci` dan `npm.cmd run dev:local`. Password dan akun database yang sudah ada tidak diubah saat server dimulai ulang. Untuk password awal khusus, isi `ADMIN_PASSWORD` sebelum menjalankan pertama kali. Admin dapat mengganti password dan membuat akun dosen serta mahasiswa melalui `/admin/pengguna`.
 
 Untuk build dengan satu server:
 
@@ -52,7 +52,7 @@ Konfigurasi Compose memetakan port ke localhost host dan mempertahankan data dal
 
 Untuk akses antar perangkat, tempatkan satu server di belakang HTTPS dengan penyimpanan persisten. Set `COOKIE_SECURE=true` setelah HTTPS tersedia; konfigurasi `TRUST_PROXY` hanya untuk alamat proxy yang dipercaya agar pemeriksaan origin memakai protokol yang benar. Jangan membuka Vite untuk penggunaan produksi. Contoh variabel tersedia di `.env.example`. ADMIN_PASSWORD dan LECTURER_PASSWORD hanya dipakai ketika membuat database pertama.
 
-SQLite cocok untuk satu server dengan jumlah pengguna terbatas; beberapa instance membutuhkan rancangan database/storage bersama. Belum ada isolasi tenant antar institusi, reset password mandiri, UI pemindahan pemilik, pemulihan backup melalui UI, maupun autosave editor. Unggahan batas 60 MB menggunakan JSON base64; unggahan besar perlu streaming/object storage pada tahap berikutnya.
+SQLite cocok untuk satu server dengan jumlah pengguna terbatas; beberapa instance membutuhkan rancangan database/storage bersama. Koleksi dan akun instansi memiliki pembatasan akses; admin General mengelola seluruh instansi. Belum ada reset password mandiri, UI pemindahan pemilik, pemulihan backup melalui UI, maupun autosave editor. Unggahan batas 60 MB menggunakan JSON base64; unggahan besar perlu streaming/object storage pada tahap berikutnya.
 
 ## Verifikasi
 

@@ -12,6 +12,11 @@ import * as fflate from 'fflate';
 
 import { Organ, Pin, UserRole, Model3DPreset, StoredBundleFile } from '../types';
 import { AnatomyDatabaseService } from '../services/db';
+import { canManageContent } from '../permissions';
+import { normalizeModel, anchorWorld, meshVisible, modelSurfaces, surfacePosition } from '../utils/modelGeometry';
+import type { AnnotationPosition } from '../utils/annotations';
+import { bundleResources } from '../utils/modelResources';
+import { specularGlossinessPlugin } from '../utils/specularGlossiness';
 import { 
   RotateCw, 
   ZoomIn, 
@@ -46,7 +51,9 @@ interface ThreeDCanvasProps {
   onSelectPin: (pin: Pin) => void;
   currentRole: UserRole;
   isPinModeActive: boolean;
-  onPinPlaced: (coords: { x: number; y: number; z: number }) => void;
+  onPinPlaced: (coords: { x: number; y: number; z: number; coordinateSpace?: 'model'; normal?: Pin['normal'] }) => void;
+  onMovePin?: (pin: Pin, position: AnnotationPosition) => Promise<void>;
+  onEditPin?: (pin: Pin) => void;
   theme: 'dark' | 'light';
   onSwitchTo2D?: () => void;
 }
@@ -63,12 +70,12 @@ export interface SubMeshItem {
   originalMaterials: THREE.Material | THREE.Material[];
 }
 
-// Singleton DRACO Loader instance with official Google CDN decoder
+// Reuse the bundled decoder so compressed models also work locally.
 let dracoLoaderInstance: DRACOLoader | null = null;
 function getDracoLoader(): DRACOLoader {
   if (!dracoLoaderInstance) {
     dracoLoaderInstance = new DRACOLoader();
-    dracoLoaderInstance.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+    dracoLoaderInstance.setDecoderPath('/draco/');
     dracoLoaderInstance.setWorkerLimit(2);
   }
   return dracoLoaderInstance;
@@ -78,7 +85,7 @@ function getDracoLoader(): DRACOLoader {
 function deepDisposeObject(obj: THREE.Object3D | null) {
   if (!obj) return;
   obj.traverse((child: any) => {
-    if (child.isMesh) {
+    if (child.isMesh || child.isSprite) {
       if (child.geometry) {
         child.geometry.dispose();
       }
@@ -88,7 +95,7 @@ function deepDisposeObject(obj: THREE.Object3D | null) {
           [
             'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap',
             'emissiveMap', 'envMap', 'lightMap', 'metalnessMap',
-            'normalMap', 'roughnessMap', 'specularMap', 'gradientMap'
+            'normalMap', 'roughnessMap', 'specularMap', 'specularColorMap', 'specularIntensityMap', 'gradientMap'
           ].forEach((prop) => {
             if (mat[prop] && typeof mat[prop].dispose === 'function') {
               try { mat[prop].dispose(); } catch (e) { /* ignore */ }
@@ -110,7 +117,7 @@ export default function ThreeDCanvas({
   isPinModeActive,
   onPinPlaced,
   theme,
-  onSwitchTo2D
+  onSwitchTo2D, onMovePin, onEditPin
 }: ThreeDCanvasProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -122,15 +129,23 @@ export default function ThreeDCanvas({
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const pinDragRef = useRef<{pin:Pin;target:HTMLButtonElement;pointer:number;x:number;y:number;moved:boolean} | null>(null);
+  const suppressPinClick = useRef(false);
   const animationFrameIdRef = useRef<number | null>(null);
+  const annotationLayerRef = useRef<HTMLDivElement>(null);
+  const pinStateRef = useRef({ pins, selectedPin });
+  pinStateRef.current = { pins, selectedPin };
+  const appearanceRef = useRef({ theme, wireframe: false });
 
   // View & UI states
   const [autoRotate, setAutoRotate] = useState(false);
   const [wireframe, setWireframe] = useState(false);
+  appearanceRef.current = { theme, wireframe };
+  const [modelAttempt, setModelAttempt] = useState(0);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isUsingProceduralFallback, setIsUsingProceduralFallback] = useState(false);
+
 
   // Sub-Mesh Hierarchy & Parsing States
   const [subMeshes, setSubMeshes] = useState<SubMeshItem[]>([]);
@@ -153,6 +168,7 @@ export default function ThreeDCanvas({
 
   // Helper to create Procedural Anatomical Preset Mesh
   const createProceduralAnatomicalMesh = useCallback((type: Model3DPreset | undefined, organId: string) => {
+    const { theme, wireframe } = appearanceRef.current;
     const group = new THREE.Group();
     const isDark = theme === 'dark';
 
@@ -376,7 +392,7 @@ export default function ThreeDCanvas({
     }
 
     return group;
-  }, [theme, wireframe]);
+  }, []);
 
   // Sub-Object Parsing & Scene Traversal Helper
   const parseSceneHierarchy = useCallback((rootObject: THREE.Object3D) => {
@@ -448,27 +464,13 @@ export default function ThreeDCanvas({
 
     setSubMeshes(extractedList);
     setFocusedMeshId(null);
+    return extractedList;
   }, []);
 
   // Center and normalize bounding box of loaded 3D Object
   const normalizeAndCenterModel = useCallback((object: THREE.Object3D, targetSize: number = 4.2) => {
-    const box = new THREE.Box3().setFromObject(object);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-
-    // Center geometry at origin (0, 0, 0)
-    object.position.x -= center.x;
-    object.position.y -= center.y;
-    object.position.z -= center.z;
-
-    // Uniformly scale model so it fills viewport comfortably
-    const maxDim = Math.max(size.x, size.y, size.z);
-    if (maxDim > 0) {
-      const scaleFactor = targetSize / maxDim;
-      object.scale.set(scaleFactor, scaleFactor, scaleFactor);
-    }
+    const { wireframe } = appearanceRef.current;
+    normalizeModel(object, targetSize);
 
     // Traverse and tag child meshes for raycasting & material properties
     object.traverse((child) => {
@@ -490,7 +492,7 @@ export default function ThreeDCanvas({
         }
       }
     });
-  }, [wireframe]);
+  }, []);
 
   // Load 3D model asynchronously based on format (.glb, .gltf, .fbx, .obj, .stl, folder/bundles)
   // Supports string URL (Blob URL, Data URL, HTTP), Blob, or ArrayBuffer
@@ -499,8 +501,11 @@ export default function ThreeDCanvas({
     format: string,
     bundleFiles?: StoredBundleFile[]
   ): Promise<THREE.Group> => {
+    const { wireframe } = appearanceRef.current;
     const normalizedFormat = (format || 'glb').toLowerCase();
     const group = new THREE.Group();
+    const resources = bundleResources(bundleFiles);
+    try {
 
     // ==========================================
     // 1. GLTF / GLB Format
@@ -510,11 +515,12 @@ export default function ThreeDCanvas({
       normalizedFormat === 'gltf' || 
       (typeof source === 'string' && (source.endsWith('.glb') || source.endsWith('.gltf')))
     ) {
-      const loader = new GLTFLoader();
+      const loader = new GLTFLoader(resources.manager);
+      loader.register(specularGlossinessPlugin);
       loader.setDRACOLoader(getDracoLoader());
 
       if (source instanceof ArrayBuffer) {
-        return new Promise<THREE.Group>((resolve, reject) => {
+        return await new Promise<THREE.Group>((resolve, reject) => {
           loader.parse(
             source,
             '',
@@ -553,7 +559,7 @@ export default function ThreeDCanvas({
         } catch (err: any) {
           // Fallback to ArrayBuffer parsing
           const arrayBuffer = await source.arrayBuffer();
-          return new Promise<THREE.Group>((resolve, reject) => {
+          return await new Promise<THREE.Group>((resolve, reject) => {
             loader.parse(
               arrayBuffer,
               '',
@@ -572,7 +578,7 @@ export default function ThreeDCanvas({
       }
 
       // String URL
-      return new Promise<THREE.Group>((resolve, reject) => {
+      return await new Promise<THREE.Group>((resolve, reject) => {
         loader.load(
           source,
           (gltf) => {
@@ -590,6 +596,7 @@ export default function ThreeDCanvas({
         );
       });
 
+
     // ==========================================
     // 2. FBX Format (Robust Blob, ArrayBuffer & Data URL)
     // ==========================================
@@ -597,7 +604,7 @@ export default function ThreeDCanvas({
       normalizedFormat === 'fbx' || 
       (typeof source === 'string' && (source.endsWith('.fbx') || source.includes('format=fbx')))
     ) {
-      const fbxLoader = new FBXLoader();
+      const fbxLoader = new FBXLoader(resources.manager);
 
       // Case 2A: Direct ArrayBuffer
       if (source instanceof ArrayBuffer) {
@@ -749,27 +756,7 @@ export default function ThreeDCanvas({
           !f.name.toLowerCase().endsWith('.mtl')
         );
 
-        const textureUrls: { [key: string]: string } = {};
-        const localCreatedUrls: string[] = [];
-
-        // Build texture filename lookup map
-        for (const tFile of textureFiles) {
-          const url = URL.createObjectURL(tFile.blob);
-          localCreatedUrls.push(url);
-          const rawName = tFile.name.toLowerCase().replace(/\\/g, '/');
-          const baseName = rawName.split('/').pop() || rawName;
-          textureUrls[rawName] = url;
-          textureUrls[baseName] = url;
-        }
-
-        const manager = new THREE.LoadingManager();
-        manager.setURLModifier((url: string) => {
-          const clean = url.toLowerCase().replace(/\\/g, '/');
-          const base = clean.split('/').pop() || clean;
-          if (textureUrls[base]) return textureUrls[base];
-          if (textureUrls[clean]) return textureUrls[clean];
-          return url;
-        });
+        const manager = resources.manager;
 
         // Read OBJ text content
         let objText = '';
@@ -780,6 +767,7 @@ export default function ThreeDCanvas({
             objText = source;
           } else {
             const res = await fetch(source);
+            if (!res.ok) throw new Error('Gagal membaca OBJ: HTTP ' + res.status);
             objText = await res.text();
           }
         } else if (source instanceof ArrayBuffer) {
@@ -793,7 +781,8 @@ export default function ThreeDCanvas({
           try {
             const mtlText = await mtlFile.blob.text();
             const mtlLoader = new MTLLoader(manager);
-            const materialsCreator = mtlLoader.parse(mtlText, '');
+            const path = (mtlFile.path || mtlFile.name).replace(/\\/g, '/').split('/').slice(0, -1).join('/');
+            const materialsCreator = mtlLoader.parse(mtlText, path ? path + '/' : '');
             materialsCreator.preload();
 
             const objLoader = new OBJLoader(manager);
@@ -810,11 +799,10 @@ export default function ThreeDCanvas({
 
           // If texture files exist without MTL, apply texture map directly to all meshes
           if (textureFiles.length > 0) {
-            const primaryTex = textureFiles[0];
-            const baseName = primaryTex.name.toLowerCase().split('/').pop() || '';
-            const texUrl = textureUrls[baseName] || URL.createObjectURL(primaryTex.blob);
+            const primaryTex = textureFiles.find(file => /\.(png|jpe?g|webp|bmp)$/i.test(file.name));
+            if (primaryTex) {
             const textureLoader = new THREE.TextureLoader(manager);
-            textureLoader.load(texUrl, (tex) => {
+            textureLoader.load(primaryTex.path || primaryTex.name, (tex) => {
               tex.colorSpace = THREE.SRGBColorSpace;
               loadedObj.traverse((child) => {
                 if ((child as THREE.Mesh).isMesh) {
@@ -828,6 +816,7 @@ export default function ThreeDCanvas({
                 }
               });
             });
+            }
           }
         }
 
@@ -988,7 +977,7 @@ export default function ThreeDCanvas({
       normalizedFormat === 'tds' ||
       (typeof source === 'string' && source.endsWith('.3ds'))
     ) {
-      const tdsLoader = new TDSLoader();
+      const tdsLoader = new TDSLoader(resources.manager);
 
       const processTdsObject = (object: THREE.Object3D) => {
         object.traverse((child) => {
@@ -1022,7 +1011,7 @@ export default function ThreeDCanvas({
       }
 
       if (typeof source === 'string') {
-        return new Promise<THREE.Group>((resolve, reject) => {
+        return await new Promise<THREE.Group>((resolve, reject) => {
           tdsLoader.load(
             source,
             (object) => resolve(processTdsObject(object)),
@@ -1038,76 +1027,40 @@ export default function ThreeDCanvas({
     } else {
       throw new Error(`Format 3D '${normalizedFormat}' belum didukung.`);
     }
-  }, [normalizeAndCenterModel, wireframe]);
+    } finally { await resources.ready(); resources.dispose(); }
+  }, [normalizeAndCenterModel]);
 
-  // Update 3D Pins in the Scene
+  // The tapered tip stays on the surface; the circular head faces the camera.
   const updatePinsInScene = useCallback(() => {
-    if (!pinsGroupRef.current) return;
-    const pinsGroup = pinsGroupRef.current;
-    
-    // Clear previous pin objects with deep disposal
-    while (pinsGroup.children.length > 0) {
-      const child = pinsGroup.children[0];
-      deepDisposeObject(child);
-      pinsGroup.remove(child);
-    }
-
-    pins.forEach((pin, index) => {
-      const px = pin.x !== undefined ? (pin.is3d ? pin.x : ((pin.x - 50) / 25) * 1.5) : 0;
-      const py = pin.y !== undefined ? (pin.is3d ? pin.y : ((50 - pin.y) / 25) * 1.5) : 0;
-      const pz = pin.z !== undefined ? pin.z : 1.8;
-
-      const isSelected = selectedPin && selectedPin.id === pin.id;
-
-      // Pin Container Group
-      const pinObj = new THREE.Group();
-      pinObj.position.set(px, py, pz);
-      pinObj.userData = { pinData: pin, pinIndex: index };
-
-      // 1. Visible Pin sphere beacon
-      const sphereGeo = new THREE.SphereGeometry(0.24, 16, 16);
-      const sphereMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0xf59e0b : 0x14b8a6,
-      });
-      const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-      sphere.userData = { pinData: pin };
-      pinObj.add(sphere);
-
-      // 2. Outer pulse ring
-      const ringGeo = new THREE.RingGeometry(0.30, 0.42, 24);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0xfbbf24 : 0x2dd4bf,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.85
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.userData = { pinData: pin };
-      pinObj.add(ring);
-
-      // 3. Connecting stalk
-      const stalkGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.5, 8);
-      const stalkMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const stalk = new THREE.Mesh(stalkGeo, stalkMat);
-      stalk.position.set(0, -0.3, 0);
-      stalk.userData = { pinData: pin };
-      pinObj.add(stalk);
-
-      // 4. Enlarged invisible touch hit-box sphere (ensures effortless 44px+ touch tapping on mobile/tablet)
-      const touchHitGeo = new THREE.SphereGeometry(0.6, 10, 10);
-      const touchHitMat = new THREE.MeshBasicMaterial({ 
-        visible: false,
-        transparent: true,
-        opacity: 0 
-      });
-      const touchHitBox = new THREE.Mesh(touchHitGeo, touchHitMat);
-      touchHitBox.name = 'pin-touch-hitbox';
-      touchHitBox.userData = { pinData: pin };
-      pinObj.add(touchHitBox);
-
-      pinsGroup.add(pinObj);
+    const pinsGroup = pinsGroupRef.current; const model = modelGroupRef.current;
+    if (!pinsGroup) return;
+    while (pinsGroup.children.length) { const child = pinsGroup.children[0]; deepDisposeObject(child); pinsGroup.remove(child); }
+    pinsGroup.visible = Boolean(model); if (!model) return;
+    if (pinsGroup.parent !== model) model.add(pinsGroup);
+    const { pins, selectedPin } = pinStateRef.current;
+    pins.filter(pin => pin.is3d || pin.z !== undefined).forEach((pin, index) => {
+      const selected = selectedPin?.id === pin.id;
+      const nail = new THREE.Group();
+      nail.position.copy(pin.coordinateSpace === 'model' ? new THREE.Vector3(pin.x, pin.y, pin.z || 0) : model.worldToLocal(anchorWorld(model, pin)));
+      nail.userData = { pinData: pin };
+      const normal = new THREE.Vector3(pin.normal?.x || 0, pin.normal?.y || 0, pin.normal?.z ?? 1).normalize();
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.30, 3), new THREE.MeshBasicMaterial({ color: selected ? 0xf59e0b : 0x14b8a6 }));
+      tip.position.copy(normal).multiplyScalar(0.15);
+      tip.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal.clone().negate());
+      tip.userData = { pinData: pin }; nail.add(tip); nail.userData.tip = tip;
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+      const context = canvas.getContext('2d')!;
+      context.beginPath(); context.arc(64, 64, 54, 0, Math.PI * 2);
+      context.fillStyle = selected ? '#f59e0b' : '#0d9488'; context.fill();
+      context.strokeStyle = '#ffffff'; context.lineWidth = 7; context.stroke();
+      context.fillStyle = '#ffffff'; context.font = 'bold 56px sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(String(index + 1), 64, 67);
+      const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+      const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: true, depthWrite: false }));
+      head.position.copy(normal).multiplyScalar(0.34); head.scale.setScalar(selected ? 0.44 : 0.38);
+      head.userData = { pinData: pin }; nail.add(head); nail.userData.head = head;
+      pinsGroup.add(nail);
     });
-  }, [pins, selectedPin]);
+  }, []);
 
   // Synchronize autoRotate with OrbitControls
   useEffect(() => {
@@ -1115,6 +1068,14 @@ export default function ThreeDCanvas({
       controlsRef.current.autoRotate = autoRotate;
     }
   }, [autoRotate]);
+  useEffect(() => { if (sceneRef.current) sceneRef.current.background = new THREE.Color(theme === 'dark' ? 0x020617 : 0xf8fafc); }, [theme]);
+  useEffect(() => {
+    modelGroupRef.current?.traverse(object => {
+      if (!(object as THREE.Mesh).isMesh || object.userData.pinData) return;
+      const material = (object as THREE.Mesh).material;
+      (Array.isArray(material) ? material : [material]).forEach(value => { if ('wireframe' in value) value.wireframe = wireframe; });
+    });
+  }, [wireframe]);
 
   // Main Scene Setup & Asynchronous Model Loading
   useEffect(() => {
@@ -1146,6 +1107,7 @@ export default function ThreeDCanvas({
     renderer.shadowMap.enabled = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.style.touchAction = 'none'; // Prevent browser scroll interference during gestures
+    renderer.domElement.dataset.viewerInstance = crypto.randomUUID();
     rendererRef.current = renderer;
 
     mountRef.current.innerHTML = '';
@@ -1194,6 +1156,8 @@ export default function ThreeDCanvas({
     pinsGroupRef.current = pinsGroup;
     scene.add(pinsGroup);
 
+    let surfaceMeshes: THREE.Mesh[] = [];
+    let originalMaterials: THREE.Material[] = [];
     // 7. Asynchronous Model Resolution & Loading
     async function setupModel() {
       setLoadError(null);
@@ -1210,18 +1174,19 @@ export default function ThreeDCanvas({
           const format = modelData.format || organ.model3dFormat || 'glb';
           const source = modelData.blob || modelData.sourceUrl!;
           loadedModel = await loadCustom3DModel(source, format, modelData.bundleFiles);
-          setIsUsingProceduralFallback(false);
+
         } else {
           // Fallback to legacy URL resolution if available
           const sourceUrl = await AnatomyDatabaseService.resolve3DModelSource(organ);
           if (sourceUrl && (sourceUrl.startsWith('blob:') || sourceUrl.startsWith('http') || sourceUrl.startsWith('data:'))) {
             const format = organ.model3dFormat || 'glb';
             loadedModel = await loadCustom3DModel(sourceUrl, format);
-            setIsUsingProceduralFallback(false);
+
           } else {
+            if (organ.model3dType === 'custom_upload' || organ.mediaFileId || organ.model3dData) throw new Error('Berkas model 3D tidak ditemukan. Unggah ulang berkas beserta paket pendukungnya.');
             // Use Procedural Anatomical Preset
             loadedModel = createProceduralAnatomicalMesh(organ.model3dType, organ.id);
-            setIsUsingProceduralFallback(false);
+
           }
         }
 
@@ -1240,29 +1205,14 @@ export default function ThreeDCanvas({
         scene.add(loadedModel);
 
         // Parse Sub-Object Tree Hierarchy
-        parseSceneHierarchy(loadedModel);
+        originalMaterials = parseSceneHierarchy(loadedModel).flatMap(item => Array.isArray(item.originalMaterials) ? item.originalMaterials : [item.originalMaterials]);
+        surfaceMeshes = modelSurfaces(loadedModel);
         updatePinsInScene();
 
       } catch (err: any) {
-        console.warn('Failed to load custom 3D model, falling back to procedural preset:', err);
         if (!isMounted) return;
-
         setLoadError(err?.message || 'Gagal memuat berkas 3D');
-        setIsUsingProceduralFallback(true);
-
-        // Gracefully fallback to procedural anatomical mesh without crashing
-        const fallbackMesh = createProceduralAnatomicalMesh(organ.model3dType, organ.id);
-        if (modelGroupRef.current) {
-          deepDisposeObject(modelGroupRef.current);
-          scene.remove(modelGroupRef.current);
-        }
-        modelGroupRef.current = fallbackMesh;
-        scene.add(fallbackMesh);
-
-        // Parse Hierarchy on fallback
-        parseSceneHierarchy(fallbackMesh);
-        updatePinsInScene();
-
+        modelGroupRef.current = null; pinsGroup.visible = false; setSubMeshes([]);
       } finally {
         if (isMounted) {
           setIsLoadingModel(false);
@@ -1272,19 +1222,32 @@ export default function ThreeDCanvas({
 
     setupModel();
 
+    let lastLabelUpdate = 0;
+    const labelRaycaster = new THREE.Raycaster();
     // 8. Animation Loop with OrbitControls Update
     const animate = () => {
       animationFrameIdRef.current = requestAnimationFrame(animate);
 
       // Update OrbitControls damping & auto-rotation
-      if (controlsRef.current) {
+      if (controlsRef.current && !pinDragRef.current) {
         controlsRef.current.update();
       }
 
-      // Billboard pins to face camera
-      if (pinsGroupRef.current && cameraRef.current) {
-        pinsGroupRef.current.children.forEach(child => {
-          child.quaternion.copy(cameraRef.current!.quaternion);
+      if (performance.now() - lastLabelUpdate > 80 && annotationLayerRef.current) {
+        lastLabelUpdate = performance.now();
+        annotationLayerRef.current.querySelectorAll<HTMLButtonElement>('[data-pin-id]').forEach(button => {
+          const nail = pinsGroup.children.find(item => item.userData.pinData?.id === button.dataset.pinId);
+          const model = modelGroupRef.current;
+          if (!nail || !model || !meshVisible(model)) { button.style.visibility = 'hidden'; return; }
+          model.updateMatrixWorld(true);
+          const world = nail.userData.head.getWorldPosition(new THREE.Vector3());
+          const projected = world.clone().project(camera); const distance = world.distanceTo(camera.position);
+          labelRaycaster.set(camera.position, world.clone().sub(camera.position).normalize());
+          const first = labelRaycaster.intersectObjects(surfaceMeshes.filter(meshVisible), false)[0];
+          const visible = projected.z >= -1 && projected.z <= 1 && Math.abs(projected.x) <= 1 && Math.abs(projected.y) <= 1 && (!first || first.distance >= distance - 0.03);
+          button.style.visibility = visible ? 'visible' : 'hidden';
+          button.style.left = ((projected.x + 1) / 2 * mountRef.current!.clientWidth) + 'px';
+          button.style.top = ((1 - projected.y) / 2 * mountRef.current!.clientHeight) + 'px';
         });
       }
 
@@ -1312,6 +1275,8 @@ export default function ThreeDCanvas({
       if (animationFrameIdRef.current) cancelAnimationFrame(animationFrameIdRef.current);
       resizeObserver.disconnect();
       controls.dispose();
+      originalMaterials.forEach(material => material.dispose());
+      modelGroupRef.current = null; pinsGroupRef.current = null; controlsRef.current = null;
 
       // Deep Memory Disposal of Scene objects & textures to prevent WebGL context leaks
       if (sceneRef.current) {
@@ -1324,12 +1289,12 @@ export default function ThreeDCanvas({
         /* ignore */
       }
     };
-  }, [organ, theme, createProceduralAnatomicalMesh, loadCustom3DModel, parseSceneHierarchy, updatePinsInScene]);
+  }, [organ, modelAttempt, createProceduralAnatomicalMesh, loadCustom3DModel, parseSceneHierarchy, updatePinsInScene]);
 
   // Update Pins whenever pins change
   useEffect(() => {
     updatePinsInScene();
-  }, [updatePinsInScene]);
+  }, [pins, selectedPin, updatePinsInScene]);
 
   // Toggle Single Sub-Mesh Visibility
   const handleToggleSubMeshVisibility = (subMeshId: string, e?: React.MouseEvent) => {
@@ -1422,15 +1387,15 @@ export default function ThreeDCanvas({
       mesh.visible = sub.visible;
 
       if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat) => {
-          mat.transparent = false;
-          mat.opacity = 1.0;
-          mat.depthWrite = true;
+        mesh.material.forEach((mat, index) => {
+          const original = Array.isArray(sub.originalMaterials) ? sub.originalMaterials[index] : sub.originalMaterials;
+          if (original) mat.copy(original);
+          if ('wireframe' in mat) mat.wireframe = wireframe;
         });
       } else {
-        mesh.material.transparent = false;
-        mesh.material.opacity = 1.0;
-        mesh.material.depthWrite = true;
+        const original = Array.isArray(sub.originalMaterials) ? sub.originalMaterials[0] : sub.originalMaterials;
+        if (original) mesh.material.copy(original);
+        if ('wireframe' in mesh.material) mesh.material.wireframe = wireframe;
       }
     });
 
@@ -1452,7 +1417,56 @@ export default function ThreeDCanvas({
   }, [subMeshes, treeSearchQuery]);
 
   // Touch & Pointer Gesture Filtering: Distinguish between Orbit Rotation/Pinch vs Clean Tap/Click
+  const positionAtPointer = (x: number, y: number) => {
+    const model = modelGroupRef.current; const camera = cameraRef.current; const mount = mountRef.current;
+    if (!model || !camera || !mount || isLoadingModel || loadError) return null;
+    const rect = mount.getBoundingClientRect();
+    model.updateMatrixWorld(true); camera.updateMatrixWorld(true);
+    raycasterRef.current.setFromCamera(new THREE.Vector2((x-rect.left)/rect.width*2-1,-((y-rect.top)/rect.height)*2+1),camera);
+    const hit = raycasterRef.current.intersectObjects(modelSurfaces(model).filter(meshVisible),false)[0];
+    return hit ? surfacePosition(model,hit,raycasterRef.current.ray.direction) : null;
+  };
+  const previewPinPosition = (pin: Pin, position: AnnotationPosition) => {
+    const nail = pinsGroupRef.current?.children.find(item => item.userData.pinData?.id === pin.id);
+    if (!nail) return;
+    nail.position.set(position.x,position.y,position.z || 0);
+    const normal = new THREE.Vector3(position.normal?.x || 0,position.normal?.y || 0,position.normal?.z ?? 1).normalize();
+    nail.userData.tip.position.copy(normal).multiplyScalar(0.15);
+    nail.userData.tip.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal.clone().negate());
+    nail.userData.head.position.copy(normal).multiplyScalar(0.34);
+    nail.updateMatrixWorld(true);
+  };
+  const finishPinDrag = (cancel = false, x?: number, y?: number) => {
+    const drag = pinDragRef.current; if (!drag) return;
+    pinDragRef.current = null; suppressPinClick.current = drag.moved;
+    if (drag.target.hasPointerCapture(drag.pointer)) drag.target.releasePointerCapture(drag.pointer);
+    if (controlsRef.current) { controlsRef.current.enabled = true; controlsRef.current.autoRotate = autoRotate; }
+    const position = !cancel && drag.moved && x !== undefined && y !== undefined ? positionAtPointer(x,y) : null;
+    if (position && onMovePin) void onMovePin(drag.pin,position).finally(updatePinsInScene);
+    else updatePinsInScene();
+  };
+  useEffect(() => {
+    const cancel = (event: KeyboardEvent) => { if (event.key === 'Escape' && pinDragRef.current) finishPinDrag(true); };
+    window.addEventListener('keydown',cancel); return () => { window.removeEventListener('keydown',cancel); };
+  });
+  const startPinDrag = (event: React.PointerEvent<HTMLButtonElement>, pin: Pin) => {
+    if (!canManageContent(currentRole) || !onMovePin || !event.isPrimary || event.button !== 0) return;
+    event.preventDefault(); event.stopPropagation(); onSelectPin(pin); event.currentTarget.focus({preventScroll:true});
+    suppressPinClick.current = false;
+    pinDragRef.current = {pin,target:event.currentTarget,pointer:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
+    event.currentTarget.setPointerCapture(event.pointerId);
+    if (controlsRef.current) { controlsRef.current.enabled = false; controlsRef.current.autoRotate = false; }
+  };
+  const movePinDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = pinDragRef.current; if (!drag || drag.pointer !== event.pointerId) return;
+    event.preventDefault(); event.stopPropagation();
+    if (Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>4) drag.moved=true;
+    if (!drag.moved) return;
+    const position = positionAtPointer(event.clientX,event.clientY);
+    if (position) previewPinPosition(drag.pin,position);
+  };
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.isPrimary || e.button !== 0) { pointerStartRef.current = null; return; }
     pointerStartRef.current = {
       x: e.clientX,
       y: e.clientY,
@@ -1481,16 +1495,20 @@ export default function ThreeDCanvas({
     mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+    const model = modelGroupRef.current;
+    const surfaces = model ? modelSurfaces(model).filter(meshVisible) : [];
+    const surfaceHit = raycasterRef.current.intersectObjects(surfaces, false)[0];
 
     // 1. Check if user tapped an existing 3D pin (using enlarged touch hitboxes)
-    if (pinsGroupRef.current) {
+    if (pinsGroupRef.current?.visible) {
       const pinIntersects = raycasterRef.current.intersectObjects(pinsGroupRef.current.children, true);
-      if (pinIntersects.length > 0) {
+      if (pinIntersects.length > 0 && (!surfaceHit || pinIntersects[0].distance <= surfaceHit.distance + 0.03)) {
         let curr: THREE.Object3D | null = pinIntersects[0].object;
         while (curr && !curr.userData?.pinData) {
           curr = curr.parent;
         }
         if (curr && curr.userData?.pinData) {
+          Array.from(annotationLayerRef.current?.querySelectorAll<HTMLButtonElement>('[data-pin-id]') || []).find(button => button.dataset.pinId === curr!.userData.pinData.id)?.focus({preventScroll:true});
           onSelectPin(curr.userData.pinData);
           return;
         }
@@ -1498,18 +1516,15 @@ export default function ThreeDCanvas({
     }
 
     // 2. Pin Placement Mode for Lecturers & Superadmin
-    if (isPinModeActive && (currentRole === 'DOSEN' || currentRole === 'SUPERADMIN')) {
-      if (modelGroupRef.current) {
-        const intersects = raycasterRef.current.intersectObjects(modelGroupRef.current.children, true);
-        if (intersects.length > 0) {
-          const point = intersects[0].point;
-          onPinPlaced({
-            x: parseFloat(point.x.toFixed(2)),
-            y: parseFloat(point.y.toFixed(2)),
-            z: parseFloat(point.z.toFixed(2))
-          });
+    if (isPinModeActive && canManageContent(currentRole) && !isLoadingModel && !loadError) {
+      if (model) {
+        const hit = surfaceHit;
+        if (hit) {
+          onPinPlaced(surfacePosition(model,hit,raycasterRef.current.ray.direction));
         }
       }
+    } else if (canManageContent(currentRole) && selectedPin && onMovePin && model && surfaceHit && !isLoadingModel && !loadError) {
+      void onMovePin(selectedPin,surfacePosition(model,surfaceHit,raycasterRef.current.ray.direction));
     }
   };
 
@@ -1548,9 +1563,10 @@ export default function ThreeDCanvas({
         ref={mountRef}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        onPointerCancel={() => { pointerStartRef.current = null; }}
         style={{ touchAction: 'none' }}
         className={`w-full h-full touch-none select-none ${
-          isPinModeActive ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'
+          isPinModeActive || (canManageContent(currentRole) && selectedPin) ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'
         }`}
         id="webgl-3d-viewport"
       />
@@ -1594,32 +1610,40 @@ export default function ThreeDCanvas({
         </div>
       )}
 
-      {/* Warning Notice if Procedural Fallback is active due to invalid file */}
-      {loadError && isUsingProceduralFallback && (
-        <div className="absolute top-4 left-4 z-20 max-w-sm p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs shadow-lg backdrop-blur-md flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-bold text-[11px]">Beralih ke Model Prosedural</p>
-            <p className="text-[10px] text-amber-200/80 mt-0.5">{loadError}</p>
-            {onSwitchTo2D && (
-              <button
-                onClick={onSwitchTo2D}
-                className="mt-2 text-[10px] underline font-bold text-amber-300 hover:text-white cursor-pointer"
-              >
-                Beralih ke Diagram 2D
-              </button>
-            )}
-          </div>
+      {loadError && <div role="alert" className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/90 p-6">
+        <div className="max-w-md rounded-2xl border border-rose-500/40 bg-slate-900 p-6 text-center text-slate-100">
+          <AlertCircle className="mx-auto mb-3 text-rose-400" /><p className="font-semibold">Model 3D belum dapat dimuat</p><p className="mt-2 text-sm text-slate-400">{loadError}</p>
+          <p className="mt-2 text-sm text-slate-400">Periksa berkas utama dan berkas pendukungnya. Notasi tetap tersimpan.</p>
+          <button type="button" onClick={() => setModelAttempt(value => value + 1)} className="mt-4 rounded-lg bg-teal-500 px-4 py-2 font-semibold text-slate-950">Coba lagi</button>
+          {onSwitchTo2D && <button type="button" onClick={onSwitchTo2D} className="ml-3 text-sm underline">Lihat gambar 2D</button>}
         </div>
-      )}
+      </div>}
+      <div ref={annotationLayerRef} className="absolute inset-0 pointer-events-none" aria-label="Notasi model 3D">
+        {pins.map((pin, index) => <button type="button" key={pin.id} data-pin-id={pin.id} data-annotation-pin={pin.id} aria-label={(index + 1) + '. ' + pin.title} title={pin.title}
+          onPointerDown={event => startPinDrag(event,pin)} onPointerMove={movePinDrag}
+          onPointerUp={event => { if (pinDragRef.current?.pointer === event.pointerId) { event.stopPropagation(); finishPinDrag(false,event.clientX,event.clientY); } }}
+          onPointerCancel={() => finishPinDrag(true)} onLostPointerCapture={() => finishPinDrag(true)}
+          onDoubleClick={() => { if (canManageContent(currentRole)) onEditPin?.(pin); }}
+          onClick={() => { if (suppressPinClick.current) { suppressPinClick.current=false; return; } onSelectPin(pin); }}
+          className={'absolute -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full pointer-events-auto group touch-none ' + (canManageContent(currentRole) ? 'cursor-move' : 'cursor-pointer')} style={{ visibility: 'hidden' }}>
+          <span className={'absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 border border-teal-500 px-2 py-1 text-xs text-white ' + (selectedPin?.id === pin.id ? '' : 'opacity-0 group-hover:opacity-100 group-focus:opacity-100')}>{pin.title}</span>
+        </button>)}
+      </div>
 
       {/* Floating 3D Interaction Toolbar */}
       <div className={`absolute top-4 right-4 flex flex-col gap-1.5 backdrop-blur-md p-1.5 rounded-xl border shadow-xl z-20 ${
         isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'
       }`}>
+        {selectedPin && <button type="button" aria-label="Fokus notasi terpilih" title="Fokus notasi terpilih" className="p-2 rounded-lg text-teal-500" onClick={() => {
+          const model = modelGroupRef.current; const camera = cameraRef.current; const controls = controlsRef.current;
+          if (!model || !camera || !controls) return;
+          const point = anchorWorld(model, selectedPin);
+          const normal = new THREE.Vector3(selectedPin.normal?.x || 0, selectedPin.normal?.y || 0, selectedPin.normal?.z ?? 1).applyMatrix3(new THREE.Matrix3().getNormalMatrix(model.matrixWorld)).normalize();
+          camera.position.copy(point).add(normal.multiplyScalar(5)); controls.target.copy(point); controls.update();
+        }}><Focus size={18} /></button>}
         
         {/* Toggle Sub-Object Scene Hierarchy Tree Panel */}
-        <button
+        <button type="button"
           onClick={() => setIsTreeOpen(prev => !prev)}
           className={`p-2 rounded-lg transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center relative ${
             isTreeOpen 
@@ -1639,7 +1663,7 @@ export default function ThreeDCanvas({
         </button>
 
         {/* Reset Camera */}
-        <button
+        <button type="button"
           onClick={handleResetCamera}
           className="p-2 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
           title="Reset Orientasi Kamera"
@@ -1648,7 +1672,7 @@ export default function ThreeDCanvas({
         </button>
 
         {/* Zoom In */}
-        <button
+        <button type="button"
           onClick={() => handleZoom('in')}
           className="p-2 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
           title="Zoom In (+)"
@@ -1657,7 +1681,7 @@ export default function ThreeDCanvas({
         </button>
 
         {/* Zoom Out */}
-        <button
+        <button type="button"
           onClick={() => handleZoom('out')}
           className="p-2 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
           title="Zoom Out (-)"
@@ -1666,7 +1690,7 @@ export default function ThreeDCanvas({
         </button>
 
         {/* Auto-Rotate */}
-        <button
+        <button type="button"
           onClick={() => setAutoRotate(prev => !prev)}
           className={`p-2 rounded-lg transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
             autoRotate ? 'bg-teal-500 text-slate-950 font-bold' : 'text-slate-400 hover:bg-slate-800'
@@ -1677,7 +1701,7 @@ export default function ThreeDCanvas({
         </button>
 
         {/* Wireframe toggle */}
-        <button
+        <button type="button"
           onClick={() => setWireframe(prev => !prev)}
           className={`p-2 rounded-lg transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
             wireframe ? 'bg-teal-500 text-slate-950 font-bold' : 'text-slate-400 hover:bg-slate-800'
@@ -1721,7 +1745,7 @@ export default function ThreeDCanvas({
               </div>
             </div>
 
-            <button
+            <button type="button"
               onClick={() => setIsTreeOpen(false)}
               className="p-1 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
               title="Tutup Panel"
@@ -1768,7 +1792,7 @@ export default function ThreeDCanvas({
                 }`}
               />
               {treeSearchQuery && (
-                <button
+                <button type="button"
                   onClick={() => setTreeSearchQuery('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
                 >
@@ -1780,13 +1804,13 @@ export default function ThreeDCanvas({
             {/* Bulk Actions */}
             <div className="flex items-center justify-between text-[10px]">
               <div className="flex items-center gap-1.5">
-                <button
+                <button type="button"
                   onClick={() => handleToggleAllSubMeshes(true)}
                   className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer font-medium"
                 >
                   Semua
                 </button>
-                <button
+                <button type="button"
                   onClick={() => handleToggleAllSubMeshes(false)}
                   className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer font-medium"
                 >
@@ -1795,7 +1819,7 @@ export default function ThreeDCanvas({
               </div>
 
               {focusedMeshId && (
-                <button
+                <button type="button"
                   onClick={handleResetIsolation}
                   className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-bold transition-colors cursor-pointer flex items-center gap-1"
                 >
@@ -1855,7 +1879,7 @@ export default function ThreeDCanvas({
                     {/* Action Controls: Focus & Visibility Toggle */}
                     <div className="flex items-center gap-1 shrink-0">
                       {/* Focus / Isolate Button */}
-                      <button
+                      <button type="button"
                         onClick={() => handleFocusSubMesh(sub)}
                         className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                           isFocused
@@ -1868,7 +1892,7 @@ export default function ThreeDCanvas({
                       </button>
 
                       {/* Visibility Toggle Button */}
-                      <button
+                      <button type="button"
                         onClick={(e) => handleToggleSubMeshVisibility(sub.id, e)}
                         className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                           sub.visible

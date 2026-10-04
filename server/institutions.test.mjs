@@ -1,0 +1,103 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {createApi} from './api.mjs';
+
+test('institution accounts, isolated collections, General copies, and media remain scoped across restart',async()=>{
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'atlas-institutions-test-'));
+  const source={id:'general-source',name:'General kidney',latinName:'Ren',system:'Kemih',subSystem:'Organ',description:'Test',isFree:true,status:'published',imageUrl:'/anatomy/system-7.svg',mediaItems:[{id:'diagram',type:'2d_image',url:'/anatomy/system-7.svg',isDefault:true}],pins:[{id:'pin',mediaId:'diagram',title:'Ren',description:'Kidney',x:40,y:50}]};
+  let api=createApi({directory,seed:[source],adminPassword:'general-admin-password',lecturerPassword:'lecturer-password'});
+  let server=api.app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+  let base=`http://127.0.0.1:${server.address().port}`;
+  const request=async(url,method='GET',body,cookie='')=>{
+    const response=await fetch(base+url,{method,headers:{'Content-Type':'application/json','X-Atlas-Request':'1',Cookie:cookie},body:body===undefined?undefined:JSON.stringify(body)});
+    return {status:response.status,data:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};
+  };
+  const login=async(identifier,password='institution-password')=>(await request('/auth/login','POST',{identifier,password})).cookie;
+  try {
+    const general=await login('admin','general-admin-password');
+    assert.equal((await request('/auth/me','GET',undefined,general)).data.user.institution,'General');
+    const registry=await request('/institutions');assert.ok(registry.data.includes('Universitas Indonesia'));assert.ok(registry.data.includes('Universitas Gadjah Mada'));assert.ok(registry.data.includes('Institut Teknologi Bandung'));
+    assert.equal((await request('/institutions','POST',{name:'Universitas Baru'},general)).status,201);
+    for(const [id,role,institution] of [['ui-admin','ADMIN_INSTITUSI','UI'],['ugm-admin','ADMIN_INSTITUSI','UGM'],['ui-dosen','DOSEN','UI'],['ui-student','MAHASISWA','UI']]) {
+      assert.equal((await request('/users/'+id,'PUT',{name:id,email:id,role,institution,password:'institution-password'},general)).status,200);
+    }
+    assert.equal((await request('/users/invalid','PUT',{name:'Invalid',email:'invalid',role:'ADMIN_INSTITUSI',institution:'General',password:'institution-password'},general)).status,400);
+    const ui=await login('ui-admin'),ugm=await login('ugm-admin'),student=await login('ui-student'),dosen=await login('ui-dosen');
+    const accounts=(await request('/users','GET',undefined,ui)).data;
+    assert.equal(accounts.length,3);assert.ok(accounts.every(user=>user.institution==='Universitas Indonesia'));
+    assert.equal((await request('/users/ugm-admin','PUT',{...accounts[0],role:'MAHASISWA'},ui)).status,403);
+    assert.equal((await request('/users/ugm-admin','DELETE',undefined,ui)).status,403);
+    assert.equal((await request('/users/ui-admin','PUT',{...accounts.find(user=>user.id==='ui-admin'),role:'ADMIN'},ui)).status,403);
+    assert.equal((await request('/users/foreign','PUT',{name:'Foreign',email:'foreign',role:'MAHASISWA',institution:'UGM',password:'institution-password'},ui)).status,403);
+    for(const url of ['/institutions','/organs/reset','/organs/import','/settings/branding']) assert.equal((await request(url,url==='/settings/branding'?'PUT':'POST',{},ui)).status,403);
+    const backup=await fetch(base+'/backup',{headers:{Cookie:ui}});assert.equal(backup.status,403);
+    // Copy binary-backed General media without re-uploading or changing the original.
+    const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1cAAAAASUVORK5CYII=';
+    const upload=await request('/media','POST',{fileName:'kidney.png',category:'2d_image',base64:png},general);assert.equal(upload.status,200);
+    const original=(await request('/organs/general-source','GET',undefined,general)).data;
+    const updated=(await request('/organs/general-source','PUT',{...original,mediaItems:[{...original.mediaItems[0],mediaFileId:upload.data.id,url:upload.data.blobUrl}],imageUrl:upload.data.blobUrl},general)).data;
+    const copy=await request('/organs/general-source/copy','POST',{institution:'UGM'},ui);
+    assert.equal(copy.status,201);assert.equal(copy.data.institution,'Universitas Indonesia');assert.equal(copy.data.ownerId,'ui-admin');assert.equal(copy.data.status,'draft');assert.equal(copy.data.sourceOrganId,updated.id);
+    assert.deepEqual(copy.data.pins,updated.pins);assert.notEqual(copy.data.id,updated.id);assert.equal(copy.data.isFree,false);
+    assert.equal((await request('/organs/'+copy.data.id,'GET',undefined,student)).status,404);
+    assert.equal((await request('/organs/'+copy.data.id,'GET',undefined,ugm)).status,404);
+    assert.equal((await request('/organs/'+copy.data.id,'DELETE',undefined,ugm)).status,403);
+    assert.equal((await request('/organs/general-source','PUT',updated,ui)).status,403);
+    const own=await request('/organs/'+copy.data.id,'PUT',{...copy.data,name:'Kidney UI',status:'published',pins:[{...copy.data.pins[0],title:'Notasi UI'}]},ui);assert.equal(own.status,200);
+    assert.equal((await request('/organs/'+copy.data.id,'GET',undefined,student)).status,200);
+    assert.equal((await request('/organs/'+copy.data.id,'GET')).status,404);
+    assert.deepEqual((await request('/organs/general-source','GET',undefined,general)).data,updated);
+    const lecture=await request('/organs/ui-lecture','PUT',{...source,id:'ui-lecture',institution:'UGM'},dosen);assert.equal(lecture.status,200);assert.equal(lecture.data.institution,'Universitas Indonesia');
+    assert.equal((await request('/organs/ui-lecture','PUT',{...lecture.data,name:'Updated by institution admin'},ui)).status,200);
+    assert.equal((await request('/organs/ui-lecture','PUT',lecture.data,ugm)).status,403);
+    const ugmCopy=await request('/organs/general-source/copy','POST',{},ugm);assert.equal(ugmCopy.status,201);
+    assert.equal((await request('/organs/'+ugmCopy.data.id+'/copy','POST',{},ui)).status,404);
+    const clusterUrl='/institutions/'+encodeURIComponent('Universitas Indonesia');
+    assert.equal((await request(clusterUrl,'PUT',{name:'UI Baru'},ui)).status,403);
+    assert.equal((await request(clusterUrl,'DELETE',undefined,ui)).status,403);
+    assert.equal((await request('/institutions/General','DELETE',undefined,general)).status,400);
+    assert.equal((await request('/institutions/General','PUT',{name:'Other'},general)).status,400);
+    assert.equal((await request(clusterUrl,'DELETE',undefined,general)).status,409);
+    assert.equal((await request(clusterUrl,'PUT',{name:'UGM'},general)).status,409);
+    assert.equal((await request(clusterUrl,'PUT',{name:'Universitas Indonesia Baru'},general)).status,200);
+    assert.equal((await request('/auth/me','GET',undefined,ui)).data.user.institution,'Universitas Indonesia Baru');
+    const renamedCopy=(await request('/organs/'+copy.data.id,'GET',undefined,student)).data;
+    assert.equal(renamedCopy.institution,'Universitas Indonesia Baru');
+    assert.equal(renamedCopy.version,own.data.version+1);
+    assert.deepEqual(renamedCopy.pins,own.data.pins);
+    assert.deepEqual(renamedCopy.mediaItems,own.data.mediaItems);
+    assert.equal((await request('/organs/'+copy.data.id,'GET',undefined,ugm)).status,404);
+    assert.equal((await request('/institutions/ITB','DELETE',undefined,general)).status,200);
+    await new Promise(resolve=>server.close(resolve));api.db.close();
+    api=createApi({directory,seed:[]});server=api.app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));base=`http://127.0.0.1:${server.address().port}`;
+    assert.equal((await request('/organs/'+copy.data.id,'GET',undefined,student)).data.name,'Kidney UI');
+    const media=await fetch(base+'/media/'+upload.data.id,{headers:{Cookie:student}});assert.equal(media.status,200);assert.equal((await media.arrayBuffer()).byteLength,Buffer.from(png,'base64').length);
+    assert.equal((await request('/organs','GET',undefined,student)).data.some(organ=>organ.institution==='Universitas Gadjah Mada'),false);
+    const afterRestart=(await request('/institutions')).data;
+    assert.ok(afterRestart.includes('Universitas Indonesia Baru'));
+    assert.ok(!afterRestart.includes('Universitas Indonesia'));
+    assert.ok(!afterRestart.includes('Institut Teknologi Bandung'));
+    assert.equal((await request('/collections/copy','POST',{institution:'Universitas Indonesia Baru',ids:[source.id]},general)).data.skipped,1);
+    const bulk=await request('/collections/copy','POST',{institution:'Universitas Baru',ids:[source.id]},general);
+    assert.equal(bulk.status,200);assert.equal(bulk.data.copied,1);
+    assert.equal((await request('/collections/copy','POST',{institution:'Universitas Baru',ids:[source.id]},general)).data.skipped,1);
+    assert.equal((await request('/collections/reset','POST',{institution:'General',confirm:'RESET_MEDIA'},student)).status,403);
+    assert.equal((await request('/collections/reset','POST',{institution:'Universitas Indonesia Baru'},ui)).status,400);
+    const reset=await request('/collections/reset','POST',{institution:'UGM',confirm:'RESET_MEDIA'},ui);
+    assert.equal(reset.status,200);assert.equal(reset.data.reset,2);
+    const emptied=(await request('/organs/'+copy.data.id,'GET',undefined,ui)).data;
+    assert.deepEqual(emptied.mediaItems,[]);assert.deepEqual(emptied.pins,[]);assert.equal(emptied.imageUrl,'');assert.equal(emptied.model3dData,undefined);assert.equal(emptied.status,'draft');
+    for(const key of ['id','name','latinName','system','subSystem','standard','description','ownerId'])assert.equal(emptied[key],renamedCopy[key]);
+    assert.deepEqual((await request('/organs/general-source','GET',undefined,general)).data,updated);
+    assert.equal((await request('/organs/'+ugmCopy.data.id,'GET',undefined,ugm)).data.mediaItems.length,1);
+    await new Promise(resolve=>server.close(resolve));api.db.close();
+    api=createApi({directory,seed:[source]});server=api.app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));base=`http://127.0.0.1:${server.address().port}`;
+    assert.deepEqual((await request('/organs/'+copy.data.id,'GET',undefined,ui)).data.mediaItems,[]);
+  } finally {
+    await new Promise(resolve=>server.close(resolve));api.db.close();
+    if(!path.basename(directory).startsWith('atlas-institutions-test-'))throw Error('Unexpected test path');fs.rmSync(directory,{recursive:true,force:true});
+  }
+});

@@ -1,19 +1,20 @@
-version: '3.8'
-
 services:
   anatoverse:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: anatoverse-medika
+    build: .
     restart: unless-stopped
     ports:
-      # Port mapping: ganti APP_PORT di .env jika ingin port lain (default 3030)
-      - "${APP_PORT:-3030}:80"
+      - "127.0.0.1:${APP_PORT:-3030}:3030"
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3030
+      DATA_DIR: /app/data
+    volumes:
+      - atlas-data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3030/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
+volumes:
+  atlas-data:

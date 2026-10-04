@@ -1,0 +1,2575 @@
+[
+  {
+    "id": "istilah-terminologi",
+    "name": "Istilah & Terminologi",
+    "latinName": "Nomina Generalia",
+    "system": "1. Anatomi dan Embriologi Umum",
+    "subSystem": "1.1 Anatomi Umum Tubuh Manusia",
+    "imageUrl": "/anatomy/system-1.svg",
+    "description": "Sistem tata nama anatomi internasional resmi (Nomina Anatomica) untuk mengidentifikasi struktur morfologis tubuh tanpa ambiguitas.",
+    "functionMain": "Membakukan istilah medis berdasarkan arah anatomis serta relasi spasial.",
+    "vascularization": "Tidak berlaku (Konseptual).",
+    "innervation": "Tidak berlaku (Konseptual).",
+    "clinicalNotes": "Kesalahan arah anatomis (misal: sinistra vs dextra) memicu insiden salah sisi bedah.",
+    "isFree": true,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "istilah-terminologi-illustration",
+        "type": "2d_image",
+        "title": "Bidang dan sumbu anatomi",
+        "url": "/anatomy/system-1.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Anatomical_Planes-en.svg",
+    "mediaCredit": "Edoarado",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Bidang dan sumbu anatomi. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "pembagian-posisi-tubuh",
+    "name": "Pembagian & Posisi Tubuh",
+    "latinName": "Partes Corporis Humani",
+    "system": "1. Anatomi dan Embriologi Umum",
+    "subSystem": "1.1 Anatomi Umum Tubuh Manusia",
+    "imageUrl": "/anatomy/system-1.svg",
+    "description": "Pembagian utama tubuh manusia yang terdiri atas kepala (caput), leher (collum), badan (truncus), ekstremitas superior dan inferior.",
+    "functionMain": "Menyusun segmentasi regional tubuh untuk mempermudah pemeriksaan fisik klinis.",
+    "vascularization": "Sistemik (Arteria aorta dan cabang-cabangnya).",
+    "innervation": "Saraf sensorik dan motorik perifer.",
+    "clinicalNotes": "Pemeriksaan fisik standar kedokteran selalu dilakukan secara \"Cephalocaudal\" (Kepala ke Kaki).",
+    "isFree": true,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "pembagian-posisi-tubuh-illustration",
+        "type": "2d_image",
+        "title": "Bidang dan sumbu anatomi",
+        "url": "/anatomy/system-1.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Anatomical_Planes-en.svg",
+    "mediaCredit": "Edoarado",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Bidang dan sumbu anatomi. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "garis-bidang-imaginer",
+    "name": "Garis & Bidang Imaginer",
+    "latinName": "Lineae et Plana Imaginer",
+    "system": "1. Anatomi dan Embriologi Umum",
+    "subSystem": "1.1 Anatomi Umum Tubuh Manusia",
+    "imageUrl": "/anatomy/system-1.svg",
+    "description": "Bidang khayal (sagital, frontal, transversal) yang membagi tubuh untuk koordinat spasial organ.",
+    "functionMain": "Titik acuan pemotongan radiologi medis (CT Scan / MRI).",
+    "vascularization": "Tidak berlaku.",
+    "innervation": "Tidak berlaku.",
+    "clinicalNotes": "Pencitraan MRI selalu diatur berdasarkan potongan Aksial, Sagital, dan Koronal.",
+    "isFree": true,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "garis-bidang-imaginer-illustration",
+        "type": "2d_image",
+        "title": "Bidang dan sumbu anatomi",
+        "url": "/anatomy/system-1.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Anatomical_Planes-en.svg",
+    "mediaCredit": "Edoarado",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Bidang dan sumbu anatomi. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "embriogenesis-normal",
+    "name": "Embriogenesis Normal & Patologi",
+    "latinName": "Ontogenesis Normalis et Patologica",
+    "system": "1. Anatomi dan Embriologi Umum",
+    "subSystem": "1.2 Embriogenesis",
+    "imageUrl": "/anatomy/system-15.png",
+    "description": "Proses perkembangan manusia sejak fertilisasi, pembentukan 3 lapisan germinal, hingga organogenesis.",
+    "functionMain": "Membentuk seluruh garis keturunan seluler tubuh dari satu sel tunggal.",
+    "vascularization": "Sirkulasi uteroplasenta awal via tali pusat.",
+    "innervation": "Neurulasi menginisiasi pembentukan korda saraf pusat.",
+    "clinicalNotes": "Gangguan neurulasi memicu Spina Bifida atau Anensefali (kegagalan tuba neural).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "embriogenesis-normal-illustration",
+        "type": "2d_image",
+        "title": "Pembentukan tabung saraf",
+        "url": "/anatomy/system-15.png",
+        "isDefault": true
+      }
+    ],
+    "mediaOverview": "Ilustrasi pengantar: Pembentukan tabung saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Embryonic_Development_CNS.png",
+    "mediaCredit": "Source: Goodlett, C.R., and Horn, K.H. Mechanisms of alcohol–induced damage to the developing nervous system. Alcohol Research Health 25(3):175–184, 2001.",
+    "mediaLicense": "Public domain"
+  },
+  {
+    "id": "susunan-saraf",
+    "name": "Susunan Saraf",
+    "latinName": "Systema Nervosum",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.1 Pengantar & Organisasi",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Organisasi struktural dan fungsional dari Susunan Saraf Pusat (SSP) dan Susunan Saraf Tepi (SST).",
+    "functionMain": "Mengatur koordinasi motorik, sensorik, otonom, dan fungsi kognitif luhur.",
+    "vascularization": "A. carotis interna dan A. vertebralis.",
+    "innervation": "Inervasi sinaptik neuron motorik dan sensorik.",
+    "clinicalNotes": "Stroke iskemik merusak koordinasi motorik somatik akibat oklusi arteri serebral.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "susunan-saraf-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "neuroembriologi",
+    "name": "Neuroembriologi",
+    "latinName": "Neuroembryologia",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.1 Pengantar & Organisasi",
+    "imageUrl": "/anatomy/system-15.png",
+    "description": "Perkembangan awal sistem saraf dari lempeng ektoderm hingga terbentuk tiga vesikel otak primer.",
+    "functionMain": "Inisiasi diferensiasi otak depan, tengah, belakang, dan sumsum tulang.",
+    "vascularization": "Pleksus kapiler embrio.",
+    "innervation": "Perkembangan awal aksonal segmental.",
+    "clinicalNotes": "Defisiensi asam folat prenatal sangat terkait dengan malformasi sistem saraf pusat.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "neuroembriologi-illustration",
+        "type": "2d_image",
+        "title": "Pembentukan tabung saraf",
+        "url": "/anatomy/system-15.png",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Embryonic_Development_CNS.png",
+    "mediaCredit": "Source: Goodlett, C.R., and Horn, K.H. Mechanisms of alcohol–induced damage to the developing nervous system. Alcohol Research Health 25(3):175–184, 2001.",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Pembentukan tabung saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "anatomi-cortex",
+    "name": "Anatomi Cortex",
+    "latinName": "Cortex Cerebri",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.2 Prosencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Lapisan terluar cerebrum yang berlipat-lipat membentuk sulcus dan gyrus untuk memperluas area permukaan fungsional.",
+    "functionMain": "Pusat kognisi, bahasa, memori, gerakan sadar, dan persepsi sensorik.",
+    "vascularization": "A. cerebri anterior, media, dan posterior.",
+    "innervation": "Saraf asosiasi intrakortikal.",
+    "clinicalNotes": "Afasia Broca disebabkan oleh kerusakan gyrus frontalis inferior lobus kiri.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "anatomi-cortex-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "substansia-alba",
+    "name": "Substansia Alba",
+    "latinName": "Substantia Alba Cerebri",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.2 Prosencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Serabut saraf bermielin yang menghubungkan berbagai area korteks dan subkorteks.",
+    "functionMain": "Transmisi impuls saraf antarlokus otak secara cepat.",
+    "vascularization": "Arteri penetrasi cabang medularis.",
+    "innervation": "Traktus asosiasi, komisura, dan proyeksi.",
+    "clinicalNotes": "Multiple Sclerosis menyerang mielin substansia alba, mengacaukan hantaran saraf.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "substansia-alba-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "nuclei-subcortical",
+    "name": "Nuclei Subcortical",
+    "latinName": "Nuclei Subcorticales",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.2 Prosencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Struktur massa kelabu dalam otak yang mencakup ganglia basalia dan substansia nigra.",
+    "functionMain": "Mengatur inisiasi gerakan dan modulasi sirkuit motorik sadar.",
+    "vascularization": "Arteria lenticulostriata.",
+    "innervation": "Sistem dopaminergik dari tegmentum.",
+    "clinicalNotes": "Kerusakan neuron dopaminergik substansia nigra memicu Penyakit Parkinson.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "nuclei-subcortical-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "anatomi-diencephalon",
+    "name": "Anatomi Diencephalon",
+    "latinName": "Diencephalon",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.2 Prosencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Bagian otak yang mengitari ventrikel ketiga, mencakup talamus, hipotalamus, dan epitalamus.",
+    "functionMain": "Stasiun pemancar sensorik, pusat homeostasis otonom, dan regulasi sirkadian.",
+    "vascularization": "Cabang sirkulus arteriosus Willisi.",
+    "innervation": "Sirkuit sinaptik kompleks otonom.",
+    "clinicalNotes": "Tumor hipotalamus dapat mengacaukan regulasi suhu tubuh dan rasa lapar ekstrem.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "anatomi-diencephalon-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "struktur-mesencephalon",
+    "name": "Struktur Mesencephalon",
+    "latinName": "Mesencephalon",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.3 Mesencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Otak tengah yang terletak di antara diencephalon dan pons, bagian superior dari batang otak.",
+    "functionMain": "Refleks auditoris dan visual, jalur motorik naik-turun, serta asal N. III dan IV.",
+    "vascularization": "A. basilaris dan A. cerebri posterior.",
+    "innervation": "Nervus Oculomotorius (N. III) dan Trochlearis (N. IV).",
+    "clinicalNotes": "Kompresi mesencephalon pada herniasi uncus merusak fungsi saraf okulomotorik (pupil midriasis).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "struktur-mesencephalon-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "anatomi-pons",
+    "name": "Anatomi Pons",
+    "latinName": "Pons",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.4 Rhombencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Jembatan jaringan saraf antara cerebrum, medulla oblongata, dan cerebellum.",
+    "functionMain": "Pusat respirasi pneumotaksis dan asal dari saraf kranial N. V, VI, VII, VIII.",
+    "vascularization": "Aa. pontinae cabang dari Arteria Basilaris.",
+    "innervation": "Inti N. Trigeminus, Abducens, Facialis, Vestibulocochlearis.",
+    "clinicalNotes": "Pons stroke dapat menyebabkan Locked-in Syndrome (kelumpuhan total kecuali gerakan mata vertikal).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "anatomi-pons-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "medulla-oblongata",
+    "name": "Medulla Oblongata",
+    "latinName": "Medulla Oblongata",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.4 Rhombencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Bagian distal batang otak yang berlanjut menjadi medulla spinalis di foramen magnum.",
+    "functionMain": "Mengontrol fungsi vital otonom seperti pernapasan, denyut jantung, dan tekanan darah.",
+    "vascularization": "A. spinalis anterior dan A. cerebellar inferior posterior.",
+    "innervation": "N. Craniales IX, X, XI, XII.",
+    "clinicalNotes": "Peningkatan tekanan intrakranial hebat mendesak tonsil serebelum menjepit medulla, memicu henti napas.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "medulla-oblongata-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "anatomi-cerebellum",
+    "name": "Anatomi Cerebellum",
+    "latinName": "Cerebellum",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.4 Rhombencephalon",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Otak kecil yang terletak di fossa posterior cranii, di belakang pons dan medulla.",
+    "functionMain": "Koordinasi motorik halus, keseimbangan, postur tubuh, dan tonus otot.",
+    "vascularization": "SCA, AICA, dan PICA (Arteri Cerebellares).",
+    "innervation": "Serabut purkinje dan pedunculus cerebellaris.",
+    "clinicalNotes": "Kerusakan cerebellum menyebabkan ataksia (gerakan sempoyongan) dan dismetria.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "anatomi-cerebellum-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "struktur-luar-medulla",
+    "name": "Struktur Luar",
+    "latinName": "Morphologia Externa Medullae Spinalis",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.5 Medulla Spinalis",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Morfologi luar sumsum tulang belakang dengan pelebaran intumescentia dan berujung pada conus medullaris.",
+    "functionMain": "Menghubungkan sistem saraf tepi dengan otak serta memproses refleks lokal.",
+    "vascularization": "Arteria Spinalis Anterior dan Posteriores.",
+    "innervation": "Saraf spinal segmentalis (C1 - Co1).",
+    "clinicalNotes": "Pungsi lumbal dilakukan di sela L3-L4 atau L4-L5 untuk menghindari cedera conus medullaris.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "struktur-luar-medulla-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "penampang-melintang-medulla",
+    "name": "Penampang Melintang",
+    "latinName": "Sectio Transversalis Medullae Spinalis",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.5 Medulla Spinalis",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Potongan transversal medulla spinalis yang memperlihatkan substansia grisea berbentuk kupu-kupu dikelilingi substansia alba.",
+    "functionMain": "Tempat sinaps refleks motorik (cornu anterior) dan sensorik (cornu posterior).",
+    "vascularization": "Arteria spinalis anterior dan posterior segmental.",
+    "innervation": "Radix anterior (motorik) dan radix posterior (sensorik).",
+    "clinicalNotes": "Poliomielitis menyerang cornu anterior medulla spinalis, menyebabkan kelumpuhan flaksid.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "penampang-melintang-medulla-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "lapisan-meninges",
+    "name": "Lapisan Meninges",
+    "latinName": "Meninges",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.6 Meninges & LCS",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Tiga lapisan pelindung otak dan medula spinalis: duramater, arachnoidmater, dan piamater.",
+    "functionMain": "Melindungi sistem saraf dari trauma fisik dan mengalirkan LCS.",
+    "vascularization": "Arteria Meningea Media cabang dari A. maxillaris.",
+    "innervation": "Saraf sensorik dari cabang N. trigeminus.",
+    "clinicalNotes": "Ruptur arteria meningea media memicu Epidural Hematoma (EDH) akibat trauma temporal kranium.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "lapisan-meninges-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "sistem-ventrikel-lcs",
+    "name": "Sistem Ventrikel & LCS",
+    "latinName": "Systema Ventriculare et Liquor Cerebrospinalis",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.6 Meninges & LCS",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Sistem rongga otak yang memproduksi dan mengalirkan cairan serebrospinal (LCS).",
+    "functionMain": "Meredam guncangan otak (bantalan air) dan nutrisi metabolisme sistem saraf.",
+    "vascularization": "Plexus choroideus ventrikel.",
+    "innervation": "Serabut otonom vaskular serebral.",
+    "clinicalNotes": "Penyumbatan saluran (misal: aquaductus sylvii) memicu hidrosefalus (penumpukan LCS).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "sistem-ventrikel-lcs-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "sistem-cerebrovascular",
+    "name": "Sistem Cerebrovascular",
+    "latinName": "Circulus Arteriosus Cerebri",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.7 Vaskularisasi & SST",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Jejaring sirkulasi arteri otak yang menyatu membentuk Circulus Arteriosus Willisi di basis cranii.",
+    "functionMain": "Menjamin kolateral sirkulasi darah yang kontinu ke seluruh hemisfer serebral.",
+    "vascularization": "A. carotis interna kiri-kanan dan A. basilaris.",
+    "innervation": "Otonom simpatis/parasimpatis pembuluh darah.",
+    "clinicalNotes": "Aneurisma sakular (berry aneurysm) pada Circulus Willisi rentan pecah memicu Subarachnoid Hemorrhage.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "sistem-cerebrovascular-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "sistem-saraf-tepi",
+    "name": "Sistem Saraf Tepi (SST)",
+    "latinName": "Systema Nervosum Periphericum",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.7 Vaskularisasi & SST",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Serabut saraf somatik dan otonom di luar kranium dan medulla spinalis, termasuk plexus saraf.",
+    "functionMain": "Menghantarkan impuls sensorik dari tepi ke SSP, dan perintah motorik dari SSP ke efektor.",
+    "vascularization": "Vasa nervorum pembuluh mikro.",
+    "innervation": "Plexus brachialis, cervicalis, lumbosacralis, dan 12 pasang N. kranial.",
+    "clinicalNotes": "Cedera N. radialis pada fraktur humerus sepertiga tengah menyebabkan \"wrist drop\" (tangan jatuh).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "sistem-saraf-tepi-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "sistem-limbik",
+    "name": "Sistem Limbik",
+    "latinName": "Systema Limbicum",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.8 Sistem Limbik & Cranium",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Sirkuit struktur otak (hippocampus, amigdala, gyrus cinguli) pengatur emosi dan pembentukan memori.",
+    "functionMain": "Regulasi memori jangka panjang, respon takut, motivasi, dan perilaku emosional.",
+    "vascularization": "Cabang arteri serebral anterior dan media.",
+    "innervation": "Sirkuit Papez intralimbik.",
+    "clinicalNotes": "Sindrom Kluver-Bucy terjadi akibat kerusakan amigdala bilateral, ditandai hiperoralitas dan hilangnya rasa takut.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "sistem-limbik-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "cranium",
+    "name": "Cranium",
+    "latinName": "Cranium",
+    "system": "2. Sistem Saraf (Systema Nervosum)",
+    "subSystem": "2.8 Sistem Limbik & Cranium",
+    "imageUrl": "/anatomy/system-9.jpg",
+    "description": "Struktur tulang pembentuk tengkorak kepala, terbagi menjadi neurocranium dan viscerocranium.",
+    "functionMain": "Melindungi otak, batang otak, serta membentuk rongga wajah dan organ indera.",
+    "vascularization": "Arteria meningea media dan pembuluh periosteal.",
+    "innervation": "N. trigeminus sensorik fasial.",
+    "clinicalNotes": "Fraktur basis cranii dapat merusak saluran saraf kranial dan memicu hematoma kacamata (raccoon eyes).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "cranium-illustration",
+        "type": "2d_image",
+        "title": "Sistem saraf",
+        "url": "/anatomy/system-9.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg",
+    "mediaCredit": "OpenStax",
+    "mediaLicense": "CC BY 4.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem saraf. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "id": "struktur-ekstraokular",
+    "name": "Struktur Ekstraokular",
+    "latinName": "Apparatus Extraocularis",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.1 Organ Penglihatan",
+    "imageUrl": "/anatomy/system-10.jpg",
+    "description": "Struktur pelindung dan penunjang bola mata termasuk palpebra, conjunctiva, apparatus lacrimalis, dan orbita.",
+    "functionMain": "Proteksi fisik bola mata, lubrikasi kornea, dan pergerakan kelopak.",
+    "vascularization": "Arteria palpebralis lateral dan medial.",
+    "innervation": "N. Facialis (motorik M. orbicularis oculi), N. Trigeminal (sensorik palpebra).",
+    "clinicalNotes": "Sumbatan glandula meibom di palpebra memicu kalazion (benjolan tanpa nyeri).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "struktur-ekstraokular-illustration",
+        "type": "2d_image",
+        "title": "Struktur mata",
+        "url": "/anatomy/system-10.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1413_Structure_of_the_Eye.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Struktur mata. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "bulbus-oculi",
+    "name": "Bulbus Oculi",
+    "latinName": "Bulbus Oculi",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.1 Organ Penglihatan",
+    "imageUrl": "/anatomy/system-10.jpg",
+    "description": "Bola mata manusia yang tersusun dari tiga lapisan konsentris utama: sklera-kornea, koroid-iris, dan retina.",
+    "functionMain": "Menangkap berkas cahaya luar dan mengubahnya menjadi impuls listrik saraf visual.",
+    "vascularization": "A. centralis retinae cabang dari A. ophthalmica.",
+    "innervation": "Nervus Opticus (N. II) untuk indera penglihatan.",
+    "clinicalNotes": "Ablasio retina adalah kondisi lepasnya lapisan sensorik retina dari epitel pigmen, memicu kebutaan mendadak.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "bulbus-oculi-illustration",
+        "type": "2d_image",
+        "title": "Struktur mata",
+        "url": "/anatomy/system-10.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1413_Structure_of_the_Eye.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Struktur mata. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "media-refrakta-musculi",
+    "name": "Media Refrakta & Musculi",
+    "latinName": "Media Refringentia et Musculi Oculi",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.1 Organ Penglihatan",
+    "imageUrl": "/anatomy/system-10.jpg",
+    "description": "Sistem pembiasan cahaya (lensa, humor aquosus, vitreous body) dan otot penggerak bola mata.",
+    "functionMain": "Membiasakan bayangan tepat jatuh ke makula retina dan menggerakkan mata.",
+    "vascularization": "Arteria ciliaris anterior dan posterior.",
+    "innervation": "N. III, IV, VI menggerakkan otot-otot ekstraokular.",
+    "clinicalNotes": "Kekeruhan pada lensa mata akibat penuaan disebut katarak.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "media-refrakta-musculi-illustration",
+        "type": "2d_image",
+        "title": "Struktur mata",
+        "url": "/anatomy/system-10.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1413_Structure_of_the_Eye.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Struktur mata. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "inervasi-vaskularisasi-mata",
+    "name": "Inervasi & Vaskularisasi",
+    "latinName": "Vasa et Nervi Bulbi",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.1 Organ Penglihatan",
+    "imageUrl": "/anatomy/system-10.jpg",
+    "description": "Persarafan sensorik, motorik, simpatik, serta suplai darah arteria ophthalmica di rongga mata.",
+    "functionMain": "Menyediakan nutrisi jaringan intraokular dan mengendalikan refleks pupil.",
+    "vascularization": "Arteria Ophthalmica dan cabang Arteri Sentralis Retina.",
+    "innervation": "N. Opticus (II), Oculomotorius (III), Trochlearis (IV), Abducens (VI), Trigeminal (V1).",
+    "clinicalNotes": "Penyumbatan akut Arteri Sentralis Retina menyebabkan kehilangan penglihatan mendadak yang permanen.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "inervasi-vaskularisasi-mata-illustration",
+        "type": "2d_image",
+        "title": "Struktur mata",
+        "url": "/anatomy/system-10.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1413_Structure_of_the_Eye.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Struktur mata. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "surface-anatomy-mata",
+    "name": "Surface Anatomy",
+    "latinName": "Anatomia Superficialis Oculi",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.1 Organ Penglihatan",
+    "imageUrl": "/anatomy/system-10.jpg",
+    "description": "Aspek visual luar dari mata termasuk limbus kornea, karunkula lakrimalis, dan punctum lakrimalis.",
+    "functionMain": "Pemeriksaan klinis langsung integritas eksternal bola mata.",
+    "vascularization": "Arteri konjungtivalis superfisialis.",
+    "innervation": "N. ophthalmicus (cabang lakrimalis, nasosiliaris).",
+    "clinicalNotes": "Pelebaran pembuluh darah konjungtiva (injeksi siliaris) menandakan peradangan intraokular.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "surface-anatomy-mata-illustration",
+        "type": "2d_image",
+        "title": "Struktur mata",
+        "url": "/anatomy/system-10.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1413_Structure_of_the_Eye.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Struktur mata. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "morfologi-struktur-nasal",
+    "name": "Morfologi & Struktur Nasal",
+    "latinName": "Nasus Externus et Cavum Nasi",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.2 Organ Penciuman",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Anatomi hidung luar dan rongga hidung bagian dalam yang dipisahkan oleh septum nasi.",
+    "functionMain": "Indera penciuman (olfaktori), filtrasi, humidifikasi, dan penghangatan udara respirasi.",
+    "vascularization": "Arteria sphenopalatina, arteria ethmoidalis anterior.",
+    "innervation": "Nervus Olfactorius (N. I) untuk penciuman, N. trigeminus untuk sensorik umum.",
+    "clinicalNotes": "Deviasi septum nasi yang berat dapat menyebabkan hambatan jalan napas kronik dan sinusitis.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "morfologi-struktur-nasal-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "sinus-paranasalis",
+    "name": "Sinus Paranasalis",
+    "latinName": "Sinus Paranasales",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.2 Organ Penciuman",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Rongga berisi udara di dalam tulang-tulang wajah yang bermuara di kavum nasi.",
+    "functionMain": "Meringankan beban cranium, resonansi suara, dan produksi mukus.",
+    "vascularization": "Aa. ethmoidales dan Aa. sphenopalatina.",
+    "innervation": "Cabang N. Maxillaris dan N. Ophthalmicus.",
+    "clinicalNotes": "Sinusitis maksilaris sering terjadi akibat penyebaran infeksi akar gigi premolar atas.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "sinus-paranasalis-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "nasopharynx-indera",
+    "name": "Nasopharynx",
+    "latinName": "Nasopharynx",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.2 Organ Penciuman",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Bagian posterior rongga hidung yang berada di atas palatum molle.",
+    "functionMain": "Saluran udara pernapasan dan ventilasi telinga tengah via tuba eustachius.",
+    "vascularization": "Arteria pharyngea ascendens.",
+    "innervation": "Plexus pharyngeus (N. IX dan X).",
+    "clinicalNotes": "Karsinoma Nasofaring (KNF) sangat erat kaitannya dengan infeksi Epstein-Barr Virus.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "nasopharynx-indera-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "inervasi-vaskularisasi-nasal",
+    "name": "Inervasi & Vaskularisasi Nasal",
+    "latinName": "Vasa et Nervi Nasi",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.2 Organ Penciuman",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Jejaring saraf trigeminus, olfaktori, serta anastomosis pembuluh darah septum.",
+    "functionMain": "Transmisi sensasi bau, nyeri, suhu, dan regulasi aliran darah hidung.",
+    "vascularization": "Plexus Kiesselbach di septum anterior.",
+    "innervation": "N. Olfactorius (I) dan cabang N. Maxillaris (V2).",
+    "clinicalNotes": "Mimisan anterior (epistaksis) paling sering bersumber dari ruptur pembuluh Plexus Kiesselbach.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "inervasi-vaskularisasi-nasal-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "struktur-auris",
+    "name": "Struktur Auris",
+    "latinName": "Auris",
+    "system": "3. Organ Indera (Organa Sensuum)",
+    "subSystem": "3.3 Organ Pendengaran (Auris)",
+    "imageUrl": "/anatomy/system-14.svg",
+    "description": "Organ pendengaran dan keseimbangan tubuh yang dibagi menjadi auris externa, media, dan interna.",
+    "functionMain": "Menghantarkan gelombang suara ke koklea, dan mendeteksi orientasi kepala (keseimbangan).",
+    "vascularization": "Arteria auricularis posterior, arteria temporalis superficialis.",
+    "innervation": "Nervus Vestibulocochlearis (N. VIII) untuk pendengaran-keseimbangan.",
+    "clinicalNotes": "Otitis Media Akut adalah infeksi telinga tengah akibat disfungsi ventilasi tuba eustachius.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "struktur-auris-illustration",
+        "type": "2d_image",
+        "title": "Struktur telinga",
+        "url": "/anatomy/system-14.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaOverview": "Ilustrasi pengantar: Struktur telinga. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Ear-anatomy.svg",
+    "mediaCredit": "Iain, SVG conversion by User:Surachit",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaLicenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/"
+  },
+  {
+    "id": "nasus-sinus-respirasi",
+    "name": "Nasus & Sinus Paranasalis",
+    "latinName": "Cavum Nasi et Sinus Paranasales",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.1 Saluran Napas Atas",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Gerbang utama pernapasan yang menyaring, menghangatkan, dan melembabkan udara luar.",
+    "functionMain": "Melakukan filtrasi mukosiliar udara inspirasi pertama sebelum masuk trakeobronkial.",
+    "vascularization": "Arteria sphenopalatina.",
+    "innervation": "N. trigeminus (cabang optalmikus dan maksilaris).",
+    "clinicalNotes": "Rinitis alergi memicu pembengkakan konka nasalis, menyumbat aliran udara napas.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "nasus-sinus-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "pharynx-respirasi",
+    "name": "Pharynx",
+    "latinName": "Pharynx",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.1 Saluran Napas Atas",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Saluran fibromuskular penghubung kavum nasi/oris ke laring dan esofagus.",
+    "functionMain": "Saluran pencernaan dan respirasi bersama, menyalurkan bolus makanan dan udara.",
+    "vascularization": "Arteria pharyngea ascendens.",
+    "innervation": "Nervus Glossopharyngeus (IX) dan Nervus Vagus (X).",
+    "clinicalNotes": "Hipertrofi tonsila palatina (amandel) dapat mengganggu jalan napas anak saat tidur (sleep apnea).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "pharynx-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "larynx-respirasi",
+    "name": "Larynx",
+    "latinName": "Larynx",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.1 Saluran Napas Atas",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Kotak suara kartilaginosa yang terletak di antara faring dan trakea.",
+    "functionMain": "Melindungi trakeobronkial dari aspirasi bolus dan memproduksi suara (fonasi).",
+    "vascularization": "Arteria laryngea superior dan inferior.",
+    "innervation": "Nervus Laryngeus Recurrens (cabang N. Vagus).",
+    "clinicalNotes": "Kerusakan unilateral N. laryngeus recurrens pasca operasi tiroid memicu suara serak.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "larynx-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "trachea-respirasi",
+    "name": "Trachea",
+    "latinName": "Trachea",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.2 Saluran Napas Bawah & Paru",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Pipa udara silindris kartilago yang berlanjut dari laring hingga bifurkasio karina.",
+    "functionMain": "Menyalurkan udara napas ke paru-paru dan mengeluarkan debris via eskalator siliar.",
+    "vascularization": "Arteria thyroidea inferior.",
+    "innervation": "Saraf simpatis torakal dan parasimpatis N. vagus.",
+    "clinicalNotes": "Tindakan trakeostomi emergensi dilakukan di sela cincin kartilago trakea ke-2 dan ke-3.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "trachea-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "pulmo-respirasi",
+    "name": "Pulmo",
+    "latinName": "Pulmo",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.2 Saluran Napas Bawah & Paru",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Organ respirasi utama yang terletak di dalam cavitas thoracis, dipisahkan oleh mediastinum.",
+    "functionMain": "Tempat pertukaran gas oksigen dan karbon dioksida di membran alveolokapiler.",
+    "vascularization": "Arteria pulmonalis (darah non-oksigen) dan Aa. bronchiales (darah nutrisional).",
+    "innervation": "Plexus pulmonalis (N. vagus dan trunkus simpatikus).",
+    "clinicalNotes": "Pneumonia menyebabkan eksudasi cairan di dalam alveoli, mengganggu difusi oksigen darah.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "pulmo-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "pleura-respirasi",
+    "name": "Pleura",
+    "latinName": "Pleura",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.2 Saluran Napas Bawah & Paru",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Membran serosa tipis pelapis dinding dada dalam dan pembungkus luar paru.",
+    "functionMain": "Mengurangi gesekan paru saat mengembang dan menjaga tekanan negatif intrapleural.",
+    "vascularization": "Arteri intercostalis dan arteri phrenica.",
+    "innervation": "N. intercostalis (pleura parietal), serabut otonom (pleura viseral).",
+    "clinicalNotes": "Akumulasi udara di cavum pleura (pneumotoraks) mendesak paru hingga kolaps total.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "pleura-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "diafragma-respirasi",
+    "name": "Diafragma",
+    "latinName": "Diaphragma",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.3 Diafragma & Dinding Thorax",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Skat kubah muskuloaponeurotik yang memisahkan rongga dada dan rongga perut.",
+    "functionMain": "Otot inspirasi utama, memperluas dimensi vertikal toraks saat kontraksi.",
+    "vascularization": "Arteria phrenica superior dan inferior.",
+    "innervation": "Nervus Phrenicus (C3, C4, C5).",
+    "clinicalNotes": "Cedera korda saraf spinal di atas C3 menyebabkan kelumpuhan diafragma dan henti napas akut.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "diafragma-respirasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "dinding-thorax",
+    "name": "Dinding Thorax",
+    "latinName": "Paries Thoracis",
+    "system": "4. Sistem Respirasi (Systema Respiratorium)",
+    "subSystem": "4.3 Diafragma & Dinding Thorax",
+    "imageUrl": "/anatomy/system-5.svg",
+    "description": "Kerangka tulang osteokartilago dan otot dada pembentuk sangkar pelindung organ toraks.",
+    "functionMain": "Memfasilitasi mekanika ventilasi pernapasan via gerakan tulang rusuk.",
+    "vascularization": "Arteria thoracica interna dan arteri intercostales posterior.",
+    "innervation": "Nervus intercostalis segmentalis.",
+    "clinicalNotes": "Fraktur costae multipel dapat memicu gerakan paradoks dinding dada (flail chest).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "dinding-thorax-illustration",
+        "type": "2d_image",
+        "title": "Sistem pernapasan",
+        "url": "/anatomy/system-5.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg",
+    "mediaCredit": "LadyofHats, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pernapasan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "makro-anatomi-jantung",
+    "name": "Makro Anatomi Jantung",
+    "latinName": "Cor",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.1 Anatomi Jantung",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Organ pemompa muscular beruang empat yang dibungkus oleh selaput fibrosa perikardium.",
+    "functionMain": "Memompakan darah ke sirkulasi pulmonal dan sirkulasi sistemik tubuh.",
+    "vascularization": "Arteria Coronaria Dextra dan Sinistra.",
+    "innervation": "Sistem konduksi otonom intrinsik ditalahi simpatis-parasimpatis.",
+    "clinicalNotes": "Oklusi akut Arteria Coronaria menyebabkan infark miokard (serangan jantung).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "makro-anatomi-jantung-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "persarafan-konduksi",
+    "name": "Persarafan & Konduksi",
+    "latinName": "Systema Conductionis Cordis",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.1 Anatomi Jantung",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Sistem listrik khusus miokardium yang memicu denyut jantung terkoordinasi secara otonom.",
+    "functionMain": "Membangkitkan dan menghantarkan impuls kontraksi ritmis atrium-ventrikel.",
+    "vascularization": "Arteri nodus sinus (cabang A. coronaria).",
+    "innervation": "Plexus cardiacus (N. vagus dan serabut simpatis).",
+    "clinicalNotes": "Blok konduksi pada AV Node dapat menyebabkan bradikardia ekstrem yang membutuhkan pacemaker.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "persarafan-konduksi-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "arteri-utama",
+    "name": "Arteri Utama",
+    "latinName": "Arteriae Systemicae",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.2 Sistem Pembuluh Darah",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Arteri sistemik utama dari percabangan aorta asendens, arkus aorta, dan aorta desendens.",
+    "functionMain": "Menyalurkan darah kaya oksigen bertekanan tinggi ke seluruh organ tubuh.",
+    "vascularization": "Cabang-cabang Aorta.",
+    "innervation": "Serabut vasomotor simpatis dinding pembuluh.",
+    "clinicalNotes": "Diseksi aorta adalah robekan intimal mendadak dinding aorta yang mengancam jiwa.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "arteri-utama-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "vena-utama",
+    "name": "Vena Utama",
+    "latinName": "Venae Systemicae",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.2 Sistem Pembuluh Darah",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Sistem pembuluh balik utama tubuh termasuk vena cava superior dan inferior.",
+    "functionMain": "Mengembalikan darah miskin oksigen dari jaringan tubuh kembali ke atrium kanan.",
+    "vascularization": "Darah sistemik balik.",
+    "innervation": "Persarafan otonom vasomotor vena.",
+    "clinicalNotes": "Deep Vein Thrombosis (DVT) di tungkai bawah berisiko lepas menjadi Emboli Paru fatal.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "vena-utama-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "jalur-sirkulasi",
+    "name": "Jalur Sirkulasi",
+    "latinName": "Circulus Sanguinis",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.2 Sistem Pembuluh Darah",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Skema aliran sirkulasi sistemik, pulmonal, hepatosirkulasi portal, dan sirkulasi janin.",
+    "functionMain": "Mengatur perfusi gas dan nutrisi sistem tubuh secara sirkular.",
+    "vascularization": "Sirkuit kardiovaskular terintegrasi.",
+    "innervation": "Baroreseptor sinus karotikus regulasi tekanan.",
+    "clinicalNotes": "Hipertensi portal pada sirosis memicu varises esofagus yang rentan pecah masif.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "jalur-sirkulasi-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "limfatik-kardiovaskular",
+    "name": "Limfatik Kardiovaskular",
+    "latinName": "Systema Lymphaticum",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.3 Limfatik & Embriologi",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Jaringan pembuluh dan nodulus limfe penampung cairan interstisial.",
+    "functionMain": "Mengembalikan cairan ekstraseluler kembali ke sistem sirkulasi vena.",
+    "vascularization": "Ductus thoracicus bermuara di angulus venosus.",
+    "innervation": "Pleksus saraf simpatik vaskular.",
+    "clinicalNotes": "Obstruksi aliran limfe (misal: akibat filariasis) menyebabkan limfedema kaki gajah.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "limfatik-kardiovaskular-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "embriologi-kardiovaskular",
+    "name": "Embriologi Kardiovaskular",
+    "latinName": "Embryologia Cordis",
+    "system": "5. Sistem Kardiovaskular (Systema Cardiovasculare)",
+    "subSystem": "5.3 Limfatik & Embriologi",
+    "imageUrl": "/anatomy/system-4.svg",
+    "description": "Proses pelipatan tabung jantung embrio membentuk sekat-sekat ruang jantung sedia kala.",
+    "functionMain": "Pembentukan struktur anatomis jantung dan pembuluh darah besar janin.",
+    "vascularization": "Pembuluh vitelina dan tali pusat embrio.",
+    "innervation": "Perkembangan pleksus jantung intrinsik.",
+    "clinicalNotes": "Defek penutupan sekat septum memicu Atrial/Ventricular Septal Defect (bocor jantung).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "embriologi-kardiovaskular-illustration",
+        "type": "2d_image",
+        "title": "Anatomi jantung",
+        "url": "/anatomy/system-4.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg",
+    "mediaCredit": "ZooFari",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Anatomi jantung. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "topografi-regio-abdomen",
+    "name": "Topografi & Regio",
+    "latinName": "Regiones Abdominis",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.1 Dinding & Cavum Abdomen",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Pembagian klinis dinding perut menjadi 4 kuadran atau 9 regio untuk lokalisasi organ.",
+    "functionMain": "Mendasari pemetaan pemeriksaan fisik inspeksi, palpasi, perkusi, auskultasi.",
+    "vascularization": "Arteri epigastrica superior dan inferior.",
+    "innervation": "Dermatom saraf spinal T7 - L1.",
+    "clinicalNotes": "Nyeri alih (referred pain) kuadran kanan bawah sangat spesifik untuk apendisitis akut.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "topografi-regio-abdomen-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "lapisan-dinding-abdomen",
+    "name": "Lapisan Dinding Abdomen",
+    "latinName": "Paries Abdominalis",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.1 Dinding & Cavum Abdomen",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Lapisan struktur anterolateral abdomen termasuk kulit, fascia Camper/Scarpa, muskuli, dan fascia transversalis.",
+    "functionMain": "Menjaga tekanan intraabdominal dan melindungi organ visceral.",
+    "vascularization": "Arteria epigastrica inferior.",
+    "innervation": "Nervus iliohypogastricus dan ilioinguinalis.",
+    "clinicalNotes": "Kelemahan dinding aponeurosis di Trigonum Hesselbach mencetuskan Hernia Inguinalis Direk.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "lapisan-dinding-abdomen-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "rongga-peritoneum",
+    "name": "Rongga Peritoneum",
+    "latinName": "Cavitas Peritonealis",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.1 Dinding & Cavum Abdomen",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Ruang potensial pembatas peritoneum parietal dan viseral berisi cairan pelumas.",
+    "functionMain": "Mencegah perlekatan antar-organ cerna dan memungkinkan mobilitas peristaltik.",
+    "vascularization": "Arteri mesenterica superior.",
+    "innervation": "Saraf otonom viseral aferen.",
+    "clinicalNotes": "Akumulasi eksudat infeksius di kantung dalam (Cavum Douglas) sering dievaluasi klinis.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "rongga-peritoneum-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "cavitas-oris-faring",
+    "name": "Cavitas Oris & Faring",
+    "latinName": "Cavitas Oris et Pharynx",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.2 Saluran Cerna Top to Bottom",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Rongga awal pencernaan makanan mekanis yang berlanjut ke saluran faring.",
+    "functionMain": "Mengunyah makanan, insalivasi amilase awal, serta menelan bolus.",
+    "vascularization": "Arteria lingualis dan arteria facialis.",
+    "innervation": "Nervus Hypoglossus (XII) motorik lidah, N. Trigeminal sensorik.",
+    "clinicalNotes": "Faringitis akut sering menyebar ke tonsila palatina membentuk amandel bernanah.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "cavitas-oris-faring-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "esofagus-gaster",
+    "name": "Esofagus & Gaster",
+    "latinName": "Oesophagus et Gaster",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.2 Saluran Cerna Top to Bottom",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Saluran pencernaan berotot penyalur makanan ke lambung tempat pengasaman bolus.",
+    "functionMain": "Transportasi bolus via gerak peristaltik lambung untuk pelumatan kimiawi asam lambung.",
+    "vascularization": "Arteria gastrica sinistra cabang truncus celiacus.",
+    "innervation": "Nervus Vagus (X) parasimpatik stimulasi sekresi Hcl.",
+    "clinicalNotes": "Kerusakan sfingter esofagus bawah mencetuskan Gastroesophageal Reflux Disease (GERD).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "esofagus-gaster-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "usus-halus",
+    "name": "Usus Halus",
+    "latinName": "Intestinum Tenue",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.2 Saluran Cerna Top to Bottom",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Saluran cerna terpanjang yang terdiri atas duodenum, jejunum, dan ileum.",
+    "functionMain": "Pusat pencernaan enzimatik dan penyerapan sebagian besar nutrisi makanan.",
+    "vascularization": "Arteria mesenterica superior.",
+    "innervation": "Plexus myentericus Auerbach dan submucosa Meissner.",
+    "clinicalNotes": "Kerusakan vili usus halus akibat intoleransi gluten dijumpai pada Celiac Disease.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "usus-halus-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "usus-besar-anus",
+    "name": "Usus Besar & Anus",
+    "latinName": "Intestinum Crassum et Anus",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.2 Saluran Cerna Top to Bottom",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Saluran cerna lanjutan penyerap air sisa kimus dan rektum penyimpan feses sebelum anus.",
+    "functionMain": "Reabsorpsi air dan elektrolit, serta defekasi pembuangan sisa makanan.",
+    "vascularization": "Arteria mesenterica inferior dan superior.",
+    "innervation": "Sistem otonom enterik simpatik-parasimpatik.",
+    "clinicalNotes": "Pelebaran pleksus vena di bantalan rektum bawah memicu wasir atau hemoroid.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "usus-besar-anus-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "vaskularisasi-saluran-cerna",
+    "name": "Vaskularisasi Saluran Cerna",
+    "latinName": "Vascularisatio Systematis Digestorii",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.3 Vaskularisasi & Organ Aksesoris",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Sistem sirkulasi utama penyuplai foregut, midgut, dan hindgut dari cabang aorta abdominalis.",
+    "functionMain": "Menyuplai oksigen organ cerna dan membawa nutrisi serap via portal hepar.",
+    "vascularization": "Truncus celiacus, A. mesenterica superior, A. mesenterica inferior.",
+    "innervation": "Serabut vasomotor splanchnicus otonom.",
+    "clinicalNotes": "Oklusi akut arteri mesenterica dapat menyebabkan iskemia usus hebat (mesenteric ischemia).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "vaskularisasi-saluran-cerna-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "organ-aksesoris",
+    "name": "Organ Aksesoris",
+    "latinName": "Organa Accessoria Digestoria",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.3 Vaskularisasi & Organ Aksesoris",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Organ penunjang pencernaan non-saluran yang mencakup hepar, kantung empedu, dan pankreas.",
+    "functionMain": "Sekresi empedu pengemulsi lemak dan kelenjar eksokrin-endokrin pencernaan.",
+    "vascularization": "Arteria hepatica propria, Vena portae hepatis.",
+    "innervation": "Saraf otonom pleksus hepatikus.",
+    "clinicalNotes": "Penyumbatan duktus koledokus oleh batu empedu memicu sklera kuning (ikterus obstruktif).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "organ-aksesoris-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "spleen-lien-lokasi",
+    "name": "Spleen/Lien (Anatomi & Lokasi)",
+    "latinName": "Lien",
+    "system": "6. Sistem Pencernaan (Systema Digestorium)",
+    "subSystem": "6.3 Vaskularisasi & Organ Aksesoris",
+    "imageUrl": "/anatomy/system-6.svg",
+    "description": "Organ limfoid terbesar tubuh berwarna ungu kemerahan di kuadran kiri atas abdomen.",
+    "functionMain": "Filtrasi sel darah merah tua dan penyimpan cadangan trombosit.",
+    "vascularization": "Arteria splenica tortuosa dari truncus celiacus.",
+    "innervation": "Plexus splenicus otonom.",
+    "clinicalNotes": "Trauma tumpul abdomen kiri rentan memicu ruptur limpa berujung perdarahan fatal.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "spleen-lien-lokasi-illustration",
+        "type": "2d_image",
+        "title": "Sistem pencernaan",
+        "url": "/anatomy/system-6.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+    "mediaCredit": "Mariana Ruiz, Jmarchn",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Sistem pencernaan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "dinding-posterior-abdomen",
+    "name": "Dinding Posterior Abdomen",
+    "latinName": "Paries Posterior Abdominis",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.1 Topografi & Dasar Pelvis",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Struktur muskuloskeletal pembatas perut belakang, tempat melekatnya ginjal retroperitoneal.",
+    "functionMain": "Stabilisasi postur tubuh dan menyangga kedudukan organ kemih.",
+    "vascularization": "Arteria lumbalis dan phrenica inferior.",
+    "innervation": "Plexus lumbalis (L1-L4).",
+    "clinicalNotes": "Ketegangan m. psoas major akibat abses tuberkulosis menimbulkan nyeri psoas sign.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "dinding-posterior-abdomen-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "cavum-pelvis",
+    "name": "Cavum Pelvis",
+    "latinName": "Cavitas Pelvis",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.1 Topografi & Dasar Pelvis",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Rongga panggul tempat organ genitalia dalam dan organ kemih bawah.",
+    "functionMain": "Menampung kantung kemih dan organ reproduksi internal.",
+    "vascularization": "Arteria iliaca interna.",
+    "innervation": "Plexus sacralis dan saraf pudendus.",
+    "clinicalNotes": "Kelemahan otot diafragma pelvis (prolaps organ) memicu inkontinensia urine.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "cavum-pelvis-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "ginjal-kemih",
+    "name": "Ginjal",
+    "latinName": "Ren / Nephros",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.2 Organ Sistem Kemih",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Sepasang organ retroperitoneal kacang merah di dinding perut belakang.",
+    "functionMain": "Filtrasi sisa urea darah, osmoregulasi cairan, dan sintesis eritropoietin.",
+    "vascularization": "Arteria renalis cabang langsung aorta abdominalis.",
+    "innervation": "Plexus renalis simpatis.",
+    "clinicalNotes": "Penyumbatan kaliks ginjal oleh batu kalsium menyebabkan nyeri kolik hebat.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "ginjal-kemih-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "ureter-kemih",
+    "name": "Ureter",
+    "latinName": "Ureter",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.2 Organ Sistem Kemih",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Saluran kemih muskular penghubung pelvis renalis ginjal ke vesika urinaria.",
+    "functionMain": "Mengalirkan urine via gerakan gelombang peristaltik ureter.",
+    "vascularization": "Arteria ureterica dari A. renalis dan A. iliaca.",
+    "innervation": "Plexus otonom pelvis.",
+    "clinicalNotes": "Terdapat tiga titik penyempitan ureter yang rentan menjadi lokasi tersangkutnya batu.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "ureter-kemih-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "vesica-urinaria",
+    "name": "Vesica Urinaria",
+    "latinName": "Vesica Urinaria",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.2 Organ Sistem Kemih",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Kantung penampung urine muscular berongga di kavum pelvis anterior.",
+    "functionMain": "Reservoir urine sementara sebelum dikeluarkan via refleks berkemih.",
+    "vascularization": "Arteria vesicalis superior dan inferior.",
+    "innervation": "Saraf parasimpatik splanchnicus pelvis (kontraksi m. detrusor).",
+    "clinicalNotes": "Retensi urine akut terjadi pada pria lansia akibat sumbatan hipertrofi prostat.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "vesica-urinaria-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "uretra-kemih",
+    "name": "Uretra",
+    "latinName": "Urethra",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.2 Organ Sistem Kemih",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Saluran pembuangan urine dari vesika urinaria keluar dari tubuh.",
+    "functionMain": "Ekskresi urine sistemik (dan jalur semen pada pria).",
+    "vascularization": "Arteria urethralis cabang iliaca.",
+    "innervation": "Nervus pudendus somatik (sfingter uretra eksternal).",
+    "clinicalNotes": "Uretra wanita yang pendek berisiko tinggi memicu infeksi saluran kemih (sistitis).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "uretra-kemih-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "development-kemih",
+    "name": "Development",
+    "latinName": "Embryologia Systematis Urinarii",
+    "system": "7. Sistem Kemih (Systema Urinarium)",
+    "subSystem": "7.3 Embriologi Traktus Urinarium",
+    "imageUrl": "/anatomy/system-7.svg",
+    "description": "Perkembangan sistem urinarius embrio dari mesoderm intermediet (pronefros, mesonefros, metanefros).",
+    "functionMain": "Pembentukan nefron fungsional ginjal metanefros permanen.",
+    "vascularization": "Sirkulasi aorta dorsal embrio.",
+    "innervation": "Inisiasi saraf simpatis lokal.",
+    "clinicalNotes": "Kegagalan migrasi ginjal ke kranial memicu kelainan ginjal panggul (pelvic kidney) atau ginjal tapal kuda.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "development-kemih-illustration",
+        "type": "2d_image",
+        "title": "Sistem kemih",
+        "url": "/anatomy/system-7.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Urinary_system.svg",
+    "mediaCredit": "Jordi March i Nogué [1]",
+    "mediaLicense": "CC BY-SA 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem kemih. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "id": "embriologi-dasar-genitalia",
+    "name": "Embriologi Dasar",
+    "latinName": "Embryologia Genitalium Basic",
+    "system": "8. Sistem Genitalia (Systema Genitali)",
+    "subSystem": "8.1 Embriologi Sistem Genitalia",
+    "imageUrl": "/anatomy/system-8.jpg",
+    "description": "Proses gametogenesis, ovulasi, implantasi blastokista, hingga penentuan seks genetik.",
+    "functionMain": "Mempersiapkan materi genetik reproduksi diploid dari penyatuan gamet.",
+    "vascularization": "Pembuluh vitelina awal.",
+    "innervation": "Belum terinervasi saraf perifer.",
+    "clinicalNotes": "Kegagalan meiosis kromosom saat gametogenesis memicu Sindrom Down (Trisomi 21).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "embriologi-dasar-genitalia-illustration",
+        "type": "2d_image",
+        "title": "Organ reproduksi laki-laki",
+        "url": "/anatomy/system-8.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Reproductive_(male).jpg",
+    "mediaCredit": "Unknown Illustrator",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Organ reproduksi laki-laki. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "embriologi-genitalia",
+    "name": "Embriologi Genitalia",
+    "latinName": "Organogenesis Genitalium",
+    "system": "8. Sistem Genitalia (Systema Genitali)",
+    "subSystem": "8.1 Embriologi Sistem Genitalia",
+    "imageUrl": "/anatomy/system-8.jpg",
+    "description": "Diferensiasi kelenjar gonad indiferen menjadi testis atau ovarium karena pengaruh gen SRY.",
+    "functionMain": "Diferensiasi saluran Wolffian (pria) atau saluran Mullerian (wanita).",
+    "vascularization": "Arteria ovarica / testicularis primordial.",
+    "innervation": "Saraf simpatis segmen bawah.",
+    "clinicalNotes": "Kegagalan testis turun dari rongga perut ke skrotum memicu kriptorkismus.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "embriologi-genitalia-illustration",
+        "type": "2d_image",
+        "title": "Organ reproduksi laki-laki",
+        "url": "/anatomy/system-8.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Reproductive_(male).jpg",
+    "mediaCredit": "Unknown Illustrator",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Organ reproduksi laki-laki. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "organ-dalam-pria",
+    "name": "Organ Dalam",
+    "latinName": "Organa Genitalia Masculina Interna",
+    "system": "8. Sistem Genitalia (Systema Genitali)",
+    "subSystem": "8.2 Sistem Reproduksi Masculina",
+    "imageUrl": "/anatomy/system-8.jpg",
+    "description": "Struktur reproduksi pria dalam termasuk testis, epididimis, duktus deferens, dan prostat.",
+    "functionMain": "Spermatogenesis, penyimpanan sperma matur, dan sekresi cairan semen.",
+    "vascularization": "Arteria testicularis cabang langsung aorta abdominalis.",
+    "innervation": "Plexus prostaticus otonom simpatik-parasimpatik.",
+    "clinicalNotes": "Karsinoma prostat sering berkembang di zona perifer kelenjar prostat.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "organ-dalam-pria-illustration",
+        "type": "2d_image",
+        "title": "Organ reproduksi laki-laki",
+        "url": "/anatomy/system-8.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Reproductive_(male).jpg",
+    "mediaCredit": "Unknown Illustrator",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Organ reproduksi laki-laki. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "organ-luar-pria",
+    "name": "Organ Luar",
+    "latinName": "Organa Genitalia Masculina Externa",
+    "system": "8. Sistem Genitalia (Systema Genitali)",
+    "subSystem": "8.2 Sistem Reproduksi Masculina",
+    "imageUrl": "/anatomy/system-8.jpg",
+    "description": "Struktur reproduksi luar pria yang mencakup penis dan skrotum.",
+    "functionMain": "Kopulasi pengantar semen ke vagina dan proteksi suhu testis.",
+    "vascularization": "Arteria profunda penis cabang pudenda.",
+    "innervation": "Nervus pudendus (somatik), saraf kavernosus parasimpatis ereksi.",
+    "clinicalNotes": "Disfungsi ereksi dapat dipicu oleh stenosis mikroarteri pudenda.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "organ-luar-pria-illustration",
+        "type": "2d_image",
+        "title": "Organ reproduksi laki-laki",
+        "url": "/anatomy/system-8.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Reproductive_(male).jpg",
+    "mediaCredit": "Unknown Illustrator",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Organ reproduksi laki-laki. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "organ-dalam-wanita",
+    "name": "Organ Dalam",
+    "latinName": "Organa Genitalia Feminina Interna",
+    "system": "8. Sistem Genitalia (Systema Genitali)",
+    "subSystem": "8.3 Sistem Reproduksi Feminina",
+    "imageUrl": "/anatomy/system-13.svg",
+    "description": "Sistem reproduksi dalam wanita yang mencakup ovarium, tuba falopii, uterus, dan vagina.",
+    "functionMain": "Oogenesis, ovulasi, fertilisasi oosit, dan kehamilan (gestasi) janin.",
+    "vascularization": "Arteria uterina (cabang iliaca interna) dan arteria ovarica.",
+    "innervation": "Plexus uterovaginalis otonom.",
+    "clinicalNotes": "Mioma uteri adalah tumor jinak sel otot polos dinding miometrium uterus.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "organ-dalam-wanita-illustration",
+        "type": "2d_image",
+        "title": "Organ reproduksi perempuan",
+        "url": "/anatomy/system-13.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaOverview": "Ilustrasi pengantar: Organ reproduksi perempuan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Basic_Female_Reproductive_System_(English).svg",
+    "mediaCredit": "Source file: LouisBB This file: Svenskbygderna (talk)",
+    "mediaLicense": "Public domain"
+  },
+  {
+    "id": "organ-luar-mammae-wanita",
+    "name": "Organ Luar & Mammae",
+    "latinName": "Organa Genitalia Feminina Externa et Mamma",
+    "system": "8. Sistem Genitalia (Systema Genitali)",
+    "subSystem": "8.3 Sistem Reproduksi Feminina",
+    "imageUrl": "/anatomy/system-13.svg",
+    "description": "Genitalia eksterna (vulva) dan payudara glandula mammae sebagai aparatus laktasi.",
+    "functionMain": "Kopulasi luar, proteksi infeksi, serta sekresi nutrisi ASI laktasi.",
+    "vascularization": "Arteria thoracica interna (mammae) dan arteria pudenda interna.",
+    "innervation": "Saraf intercostalis T4 lateral (mammae) dan nervus pudendus.",
+    "clinicalNotes": "Kanker payudara (adenokarsinoma) paling sering berawal di duktus laktiferus payudara.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "organ-luar-mammae-wanita-illustration",
+        "type": "2d_image",
+        "title": "Organ reproduksi perempuan",
+        "url": "/anatomy/system-13.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaOverview": "Ilustrasi pengantar: Organ reproduksi perempuan. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Basic_Female_Reproductive_System_(English).svg",
+    "mediaCredit": "Source file: LouisBB This file: Svenskbygderna (talk)",
+    "mediaLicense": "Public domain"
+  },
+  {
+    "id": "organogenesis-endokrin",
+    "name": "Organogenesis",
+    "latinName": "Organogenesis Systematis Endokrin",
+    "system": "9. Kelenjar Endokrin (Glandulae Endocrinae)",
+    "subSystem": "9.1 Pengantar & Otak",
+    "imageUrl": "/anatomy/system-11.jpg",
+    "description": "Proses diferensiasi ektoderm (hipofisis) dan endoderm (tiroid) membentuk kelenjar sekresi buntu.",
+    "functionMain": "Pembentukan struktur pelindung fungsional hormon sirkulasi.",
+    "vascularization": "Pleksus vaskular kapiler fenestrata.",
+    "innervation": "Saraf otonom vasomotor kelenjar.",
+    "clinicalNotes": "Kegagalan kantung Rathke migrasi memicu kista hipofisis kongenital.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "organogenesis-endokrin-illustration",
+        "type": "2d_image",
+        "title": "Kelenjar endokrin",
+        "url": "/anatomy/system-11.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Kelenjar endokrin. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "hipotalamus-hipofisis-pineal",
+    "name": "Hipotalamus, Hipofisis, Pineal",
+    "latinName": "Hypothalamus, Hypophysis et Glandula Pinealis",
+    "system": "9. Kelenjar Endokrin (Glandulae Endocrinae)",
+    "subSystem": "9.1 Pengantar & Otak",
+    "imageUrl": "/anatomy/system-11.jpg",
+    "description": "Kompleks kelenjar pengatur neuroendokrin utama di dasar otak tengah.",
+    "functionMain": "Pusat integrasi umpan balik hormonal, pertumbuhan, sirkadian, dan metabolisme.",
+    "vascularization": "Sistem porta hipofiseal.",
+    "innervation": "Jalur traktus hipotalamohipofiseal saraf.",
+    "clinicalNotes": "Adenoma hipofisis dapat menekan kiasma optikum, menyebabkan hemianopsia bitemporal (buta samping).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "hipotalamus-hipofisis-pineal-illustration",
+        "type": "2d_image",
+        "title": "Kelenjar endokrin",
+        "url": "/anatomy/system-11.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Kelenjar endokrin. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "tiroid-paratiroid",
+    "name": "Tiroid & Paratiroid",
+    "latinName": "Glandula Thyroidea et Parathyroidea",
+    "system": "9. Kelenjar Endokrin (Glandulae Endocrinae)",
+    "subSystem": "9.2 Leher & Abdomen",
+    "imageUrl": "/anatomy/system-11.jpg",
+    "description": "Kelenjar di leher depan pembentuk hormon tiroid dan pengatur homeostasis kalsium.",
+    "functionMain": "Mengatur laju metabolisme basal tubuh dan kalsium darah.",
+    "vascularization": "Arteria thyroidea superior dan inferior.",
+    "innervation": "Ganglion servikal simpatis.",
+    "clinicalNotes": "Penyakit Graves adalah autoimun hipertiroidisme yang ditandai mata menonjol (eksoftalmus).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "tiroid-paratiroid-illustration",
+        "type": "2d_image",
+        "title": "Kelenjar endokrin",
+        "url": "/anatomy/system-11.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Kelenjar endokrin. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "pankreas-suprarenal",
+    "name": "Pankreas & Suprarenal",
+    "latinName": "Insulae Pancreaticae et Glandula Suprarenalis",
+    "system": "9. Kelenjar Endokrin (Glandulae Endocrinae)",
+    "subSystem": "9.2 Leher & Abdomen",
+    "imageUrl": "/anatomy/system-11.jpg",
+    "description": "Kelenjar insulin abdomen (pankreas) dan adrenal di atas kutub ginjal.",
+    "functionMain": "Sekresi insulin, kortisol stres, aldosteron, dan adrenalin.",
+    "vascularization": "Arteria suprarenalis superior, media, dan inferior.",
+    "innervation": "Serabut simpatis preganglionik splanchnicus.",
+    "clinicalNotes": "Kerusakan destruksi autoimun sel beta pankreas memicu Diabetes Mellitus tipe 1.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "pankreas-suprarenal-illustration",
+        "type": "2d_image",
+        "title": "Kelenjar endokrin",
+        "url": "/anatomy/system-11.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Kelenjar endokrin. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "ovarium-testis-endokrin",
+    "name": "Ovarium & Testis",
+    "latinName": "Gonades Endocrinae",
+    "system": "9. Kelenjar Endokrin (Glandulae Endocrinae)",
+    "subSystem": "9.3 Gonad & Thymus",
+    "imageUrl": "/anatomy/system-11.jpg",
+    "description": "Kelenjar seks penghasil hormon steroid progesteron, estrogen, dan testosteron.",
+    "functionMain": "Memicu tanda perkembangan seks sekunder dan maturasi sel gamet.",
+    "vascularization": "Arteria ovarica / testicularis.",
+    "innervation": "Pleksus saraf gonad otonom.",
+    "clinicalNotes": "Sindrom ovarium polikistik (PCOS) memicu anovulasi kronis dan hiperandrogenisme.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "ovarium-testis-endokrin-illustration",
+        "type": "2d_image",
+        "title": "Kelenjar endokrin",
+        "url": "/anatomy/system-11.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Kelenjar endokrin. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "glandula-thymus",
+    "name": "Thymus",
+    "latinName": "Thymus",
+    "system": "9. Kelenjar Endokrin (Glandulae Endocrinae)",
+    "subSystem": "9.3 Gonad & Thymus",
+    "imageUrl": "/anatomy/system-11.jpg",
+    "description": "Kelenjar limfoid-endokrin di kavitas mediastinum superior anterior dada.",
+    "functionMain": "Tempat diferensiasi maturasi sel T imun dan atrofi setelah pubertas.",
+    "vascularization": "Arteria thoracica interna.",
+    "innervation": "Saraf otonom simpatis.",
+    "clinicalNotes": "Meskipun atrofi saat dewasa, tumor timus (timoma) dikaitkan erat dengan miastenia gravis.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "glandula-thymus-illustration",
+        "type": "2d_image",
+        "title": "Kelenjar endokrin",
+        "url": "/anatomy/system-11.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Kelenjar endokrin. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "tonsil-thymus-limfa",
+    "name": "Tonsil & Thymus",
+    "latinName": "Tonsillae et Thymus",
+    "system": "10. Sistem Limfatik (Systema Lymphoideum)",
+    "subSystem": "10.1 Organ Limfoid Utama (RES)",
+    "imageUrl": "/anatomy/system-12.jpg",
+    "description": "Organ limfoid mukosa faring (cincin Waldeyer) dan timus mediastinal.",
+    "functionMain": "Gerbang pertahanan imun udara-makanan awal dan edukasi sel T.",
+    "vascularization": "Arteria tonsillaris cabang fasialis.",
+    "innervation": "Nervus glossopharyngeus.",
+    "clinicalNotes": "Tonsilitis kronis berulang membutuhkan tindakan bedah pengangkatan (tonsilektomi).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "tonsil-thymus-limfa-illustration",
+        "type": "2d_image",
+        "title": "Sistem limfatik",
+        "url": "/anatomy/system-12.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:2201_Anatomy_of_the_Lymphatic_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem limfatik. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "limfonodi-hepar-limfa",
+    "name": "Limfonodi & Hepar",
+    "latinName": "Nodi Lymphoidei et Hepar",
+    "system": "10. Sistem Limfatik (Systema Lymphoideum)",
+    "subSystem": "10.1 Organ Limfoid Utama (RES)",
+    "imageUrl": "/anatomy/system-12.jpg",
+    "description": "Stasiun penyaring limfe regional (limfonodi) dan sel Kupffer hati.",
+    "functionMain": "Menyaring antigen patogen sirkulasi dan fagositosis eritrosit rusak.",
+    "vascularization": "Arteria hepatica propria.",
+    "innervation": "Pleksus hepatikus otonom.",
+    "clinicalNotes": "Pembengkakan limfonodus leher (limfadenopati) merupakan penanda infeksi atau metastasis sel tumor.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "limfonodi-hepar-limfa-illustration",
+        "type": "2d_image",
+        "title": "Sistem limfatik",
+        "url": "/anatomy/system-12.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:2201_Anatomy_of_the_Lymphatic_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem limfatik. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "lien-sumsum-vena",
+    "name": "Lien, Sumsum Tulang, Vena",
+    "latinName": "Lien et Medulla Ossium",
+    "system": "10. Sistem Limfatik (Systema Lymphoideum)",
+    "subSystem": "10.1 Organ Limfoid Utama (RES)",
+    "imageUrl": "/anatomy/system-12.jpg",
+    "description": "Pusat imun hematopoietik (sumsum tulang) dan penyaring darah (limpa).",
+    "functionMain": "Memproduksi seluruh sel darah somatik dan menyaring darah dari patogen.",
+    "vascularization": "Arteria splenica.",
+    "innervation": "Saraf otonom lienalis.",
+    "clinicalNotes": "Kerusakan sumsum tulang akibat kemoterapi memicu pansitopenia (kurang seluruh sel darah).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "lien-sumsum-vena-illustration",
+        "type": "2d_image",
+        "title": "Sistem limfatik",
+        "url": "/anatomy/system-12.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:2201_Anatomy_of_the_Lymphatic_System.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Sistem limfatik. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "sub-disiplin-ilmu-muskulo",
+    "name": "Sub-Disiplin Ilmu",
+    "latinName": "Introductio Muskuloskeletal",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.1 Sub-Disiplin & Konsep Dasar",
+    "imageUrl": "/anatomy/system-2.jpg",
+    "description": "Prinsip kinesiologi, sendi, tendon, ligamen, serta pertumbuhan skeletal normal.",
+    "functionMain": "Mendasari studi mekanika gerakan tubuh sadar manusia.",
+    "vascularization": "Sistem arteri nutrisional perifer.",
+    "innervation": "Saraf motorik motor end plate.",
+    "clinicalNotes": "Cedera tendon achilles membatasi dorsofleksi kaki bawah secara fatal.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "sub-disiplin-ilmu-muskulo-illustration",
+        "type": "2d_image",
+        "title": "Rangka aksial",
+        "url": "/anatomy/system-2.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:701_Axial_Skeleton-01.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Rangka aksial. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "bagian-tulang-aksial",
+    "name": "Bagian Tulang & Aksial",
+    "latinName": "Osteologia Axialis",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.2 Osteologi & Articulatio",
+    "imageUrl": "/anatomy/system-2.jpg",
+    "description": "Kerangka aksial tubuh termasuk kolumna vertebralis, kranium, dan tulang iga.",
+    "functionMain": "Melindungi susunan saraf pusat dan membentuk struktur postur tubuh tegak.",
+    "vascularization": "Arteri spinalis segmental.",
+    "innervation": "Cabang meningeal spinalis.",
+    "clinicalNotes": "Skoliosis adalah pembengkokan patologis lateral tulang belakang melebihi 10 derajat.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "bagian-tulang-aksial-illustration",
+        "type": "2d_image",
+        "title": "Rangka aksial",
+        "url": "/anatomy/system-2.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:701_Axial_Skeleton-01.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Rangka aksial. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "membri-superior",
+    "name": "Membri Superior",
+    "latinName": "Articulatio Membri Superioris",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.2 Osteologi & Articulatio",
+    "imageUrl": "/anatomy/system-2.jpg",
+    "description": "Tulang dan persendian ekstremitas atas (bahu, siku, pergelangan tangan).",
+    "functionMain": "Memfasilitasi pergerakan manipulatif luas lengan atas dan manus.",
+    "vascularization": "Arteria axillaris, radialis, dan ulnaris.",
+    "innervation": "Plexus brachialis (N. radialis, medianus, ulnaris).",
+    "clinicalNotes": "Dislokasi sendi bahu sering bergeser ke arah anterior akibat cedera abduksi rotasi luar.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "membri-superior-illustration",
+        "type": "2d_image",
+        "title": "Rangka aksial",
+        "url": "/anatomy/system-2.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:701_Axial_Skeleton-01.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Rangka aksial. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "membri-inferior",
+    "name": "Membri Inferior",
+    "latinName": "Articulatio Membri Inferioris",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.2 Osteologi & Articulatio",
+    "imageUrl": "/anatomy/system-2.jpg",
+    "description": "Tulang dan sendi penyokong ekstremitas bawah termasuk artikulasio coxae dan sendi lutut.",
+    "functionMain": "Mendukung tegak beban aksial tubuh dan pemindahan gerakan lokomotif.",
+    "vascularization": "Arteria femoralis dan poplitea.",
+    "innervation": "Nervus ischiadicus dan femoralis.",
+    "clinicalNotes": "Cedera robekan Anterior Cruciate Ligament (ACL) sangat sering terjadi pada atlet lutut.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "membri-inferior-illustration",
+        "type": "2d_image",
+        "title": "Rangka aksial",
+        "url": "/anatomy/system-2.jpg",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:701_Axial_Skeleton-01.jpg",
+    "mediaCredit": "OpenStax College",
+    "mediaLicense": "CC BY 3.0",
+    "mediaOverview": "Ilustrasi pengantar: Rangka aksial. Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai.",
+    "mediaLicenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "id": "otot-kepala-wajah-leher",
+    "name": "Otot Kepala, Wajah, Leher",
+    "latinName": "Musculi Capitis, Faciei et Colli",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.3 Miologi (Otot Rangka)",
+    "imageUrl": "/anatomy/system-3.png",
+    "description": "Otot ekspresi wajah, otot pengunyah mastikasi, dan otot leher anterior/posterior.",
+    "functionMain": "Mengekspresikan emosi wajah, mengunyah, serta memutar kepala.",
+    "vascularization": "Arteria facialis dan carotis externa.",
+    "innervation": "Nervus Facialis (VII) ekspresi, N. Trigeminal (V3) mastikasi.",
+    "clinicalNotes": "Kelumpuhan akut unilateral Nervus Facialis memicu wajah asimetris (Bell’s Palsy).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "otot-kepala-wajah-leher-illustration",
+        "type": "2d_image",
+        "title": "Otot rangka (anterior)",
+        "url": "/anatomy/system-3.png",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Muscles_anterior_labeled.png",
+    "mediaCredit": "Mikael Häggström.",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Otot rangka (anterior). Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "otot-batang-tubuh",
+    "name": "Otot Batang Tubuh",
+    "latinName": "Musculi Trunci",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.3 Miologi (Otot Rangka)",
+    "imageUrl": "/anatomy/system-3.png",
+    "description": "Otot dinding dada (pektoralis), otot perut (rektus abdominis), dan otot punggung erektor.",
+    "functionMain": "Menjaga kestabilan postur tubuh aksial dan memutar pinggang.",
+    "vascularization": "Arteri segmental intercostal.",
+    "innervation": "Saraf spinal segmentalis.",
+    "clinicalNotes": "Robekan fasia m. rectus abdominis menimbulkan pemisahan garis tengah (diastasis recti).",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "otot-batang-tubuh-illustration",
+        "type": "2d_image",
+        "title": "Otot rangka (anterior)",
+        "url": "/anatomy/system-3.png",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Muscles_anterior_labeled.png",
+    "mediaCredit": "Mikael Häggström.",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Otot rangka (anterior). Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "otot-ekstremitas",
+    "name": "Otot Ekstremitas",
+    "latinName": "Musculi Membrorum",
+    "system": "11. Sistem Muskuloskeletal",
+    "subSystem": "11.3 Miologi (Otot Rangka)",
+    "imageUrl": "/anatomy/system-3.png",
+    "description": "Struktur otot rangka penggerak lengan (biceps, triceps) dan tungkai bawah (quadriceps, gluteus).",
+    "functionMain": "Melakukan fleksi, ekstensi, abduksi, rotasi ekstremitas gerak.",
+    "vascularization": "Kapiler segmental pembuluh darah nutrisional otot.",
+    "innervation": "Saraf motorik somatik aferen korda spinalis.",
+    "clinicalNotes": "Atrofi otot terjadi sangat cepat pada pasien tirah baring lama tanpa rehabilitasi.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "otot-ekstremitas-illustration",
+        "type": "2d_image",
+        "title": "Otot rangka (anterior)",
+        "url": "/anatomy/system-3.png",
+        "isDefault": true
+      }
+    ],
+    "mediaSource": "https://commons.wikimedia.org/wiki/File:Muscles_anterior_labeled.png",
+    "mediaCredit": "Mikael Häggström.",
+    "mediaLicense": "Public domain",
+    "mediaOverview": "Ilustrasi pengantar: Otot rangka (anterior). Gambar memperlihatkan sistem secara umum; struktur khusus materi ini belum ditandai."
+  },
+  {
+    "id": "penerapan-kedokteran-kehakiman",
+    "name": "Penerapan Kedokteran Kehakiman",
+    "latinName": "Anatomia Forensis et Medicolegalis",
+    "system": "12. Forensik dan Medikolegal",
+    "subSystem": "12.1 Forensik Anatomi",
+    "imageUrl": "/anatomy/pending.svg",
+    "description": "Aplikasi ilmu antropologi fisik tulang dan thanatologi lebam mayat untuk kepentingan peradilan hukum.",
+    "functionMain": "Membantu perkiraan waktu kematian (postmortem interval), jenis kelamin biologis, dan tinggi badan skeletal.",
+    "vascularization": "Tidak berlaku langsung (Identifikasi pascamatis).",
+    "innervation": "Tidak berlaku langsung.",
+    "clinicalNotes": "Tulang panggul (pelvis) adalah bagian skeletal terakurat membedakan jenis kelamin pria vs wanita.",
+    "isFree": false,
+    "pins": [],
+    "mediaType": "2d_image",
+    "mediaItems": [
+      {
+        "id": "penerapan-kedokteran-kehakiman-illustration",
+        "type": "2d_image",
+        "title": "Ilustrasi belum tersedia",
+        "url": "/anatomy/pending.svg",
+        "isDefault": true
+      }
+    ],
+    "mediaOverview": "Ilustrasi khusus topik ini belum tersedia."
+  }
+]

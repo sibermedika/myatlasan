@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Organ, InstitutionCluster, UserProfile } from '../types';
 import { KNOWN_INSTITUTIONS } from '../services/db';
+import { institutionName } from '../permissions';
 
 interface InstitutionClusterViewProps {
   organs: Organ[];
@@ -48,7 +49,7 @@ export default function InstitutionClusterView({
   }> = {};
 
   organs.forEach((organ) => {
-    const inst = organ.institution || 'Koleksi Mandiri / Terbuka';
+    const inst = institutionName(organ.institution);
     if (!clustersMap[inst]) {
       clustersMap[inst] = {
         institution: inst,

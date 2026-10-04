@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import AnatomyCanvas from './AnatomyCanvas';
+import AddPinModal from './AddPinModal';
+import { pinMediaId } from '../utils/annotations';
+import { prepareModelPackage, PackageFile } from '../utils/modelPackage';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Sparkles, 
@@ -26,16 +30,21 @@ import {
   Archive,
   FileText
 } from 'lucide-react';
+import { INITIAL_ORGANS } from '../data';
 import * as fflate from 'fflate';
 import { normalizeEmbedUrl } from '../utils/embedHelper';
-import { Organ, MediaType, Model3DPreset, UserProfile, Supported3DFormat, OrganMediaItem, StoredBundleFile } from '../types';
+import { resolveEmbedUrl } from '../services/embed';
+import { api } from '../services/api';
+import { generalAdmin, institutionName } from '../permissions';
+import { Organ, Pin, MediaType, Model3DPreset, UserProfile, Supported3DFormat, OrganMediaItem, StoredBundleFile } from '../types';
 import { KNOWN_INSTITUTIONS, KNOWN_STANDARDS, DEFAULT_STANDARD, AnatomyDatabaseService } from '../services/db';
 
 interface AddOrganModalProps {
   initialOrgan?: Organ | null;
   currentUser?: UserProfile | null;
   onClose: () => void;
-  onSave: (organ: Organ) => void;
+  onSave: (organ: Organ) => Promise<void>;
+  onReload?: () => Promise<void>;
   theme: 'dark' | 'light';
 }
 
@@ -90,6 +99,7 @@ export default function AddOrganModal({
   currentUser,
   onClose,
   onSave,
+  onReload,
   theme
 }: AddOrganModalProps) {
   // Generate default lecturer code based on Lecturer Name & Today's Date
@@ -104,6 +114,7 @@ export default function AddOrganModal({
   };
 
   const isDark = theme === 'dark';
+  const initialModel = initialOrgan?.mediaItems?.find(item => item.type === '3d_model' && item.isDefault) || initialOrgan?.mediaItems?.find(item => item.type === '3d_model');
 
   // Basic Info
   const [name, setName] = useState(initialOrgan?.name || '');
@@ -122,8 +133,10 @@ export default function AddOrganModal({
     initialOrgan?.dosenCode || (currentUser?.name ? generateLecturerCode(currentUser.name) : '')
   );
   const [institution, setInstitution] = useState(
-    initialOrgan?.institution || currentUser?.institution || 'Koleksi Mandiri / Terbuka'
+    institutionName(initialOrgan?.institution || currentUser?.institution)
   );
+  const [registeredInstitutions, setRegisteredInstitutions] = useState<string[]>([institution]);
+  useEffect(() => { api<string[]>('/institutions').then(setRegisteredInstitutions).catch(error=>setSaveError(error.message)); }, []);
   const [customInstitution, setCustomInstitution] = useState('');
 
   // 1. Primary 2D Setup
@@ -132,13 +145,13 @@ export default function AddOrganModal({
   
   // 2. Primary 3D Setup
   const [model3dType, setModel3dType] = useState<Model3DPreset>(
-    initialOrgan?.model3dType || 'heart'
+    initialModel?.model3dType || initialOrgan?.model3dType || 'heart'
   );
   const [model3dFormat, setModel3dFormat] = useState<Supported3DFormat | undefined>(
-    initialOrgan?.model3dFormat || 'glb'
+    initialModel?.format as Supported3DFormat || initialOrgan?.model3dFormat || 'glb'
   );
   const [model3dData, setModel3dData] = useState<string | undefined>(
-    initialOrgan?.model3dData
+    initialModel?.url || initialOrgan?.model3dData
   );
   const [model3dFileName, setModel3dFileName] = useState('');
   const [upload3DMode, setUpload3DMode] = useState<'single' | 'folder' | 'zip'>('single');
@@ -161,33 +174,7 @@ export default function AddOrganModal({
     if (initialOrgan) {
       return AnatomyDatabaseService.resolveOrganMediaItems(initialOrgan);
     }
-    // Default initial slots
-    return [
-      {
-        id: `media-2d-init`,
-        title: 'Diagram 2D Anatomi',
-        type: '2d_image',
-        url: PRESET_ILLUSTRATIONS_2D[0].url,
-        format: 'jpg',
-        isDefault: true
-      },
-      {
-        id: `media-3d-init`,
-        title: 'Model 3D Interaktif (WebGL)',
-        type: '3d_model',
-        url: '',
-        format: 'glb',
-        model3dType: 'heart',
-        isDefault: false
-      },
-      {
-        id: `media-embed-init`,
-        title: 'Embed 3D Interaktif (Sketchfab)',
-        type: '3d_embed',
-        url: PRESET_EMBED_3D[0].url,
-        isDefault: false
-      }
-    ];
+    return [];
   });
 
   // State for adding additional custom object
@@ -210,6 +197,33 @@ export default function AddOrganModal({
   const [clinicalNotes, setClinicalNotes] = useState(initialOrgan?.clinicalNotes || '');
   const [isFree, setIsFree] = useState(initialOrgan?.isFree ?? false);
 
+  const [appendUploads, setAppendUploads] = useState(true);
+  const [draftPins, setDraftPins] = useState<Pin[]>(() => (initialOrgan?.pins || []).map(pin => ({ ...pin, mediaId: pinMediaId(pin, initialOrgan ? AnatomyDatabaseService.resolveOrganMediaItems(initialOrgan) : []) })));
+  const [previewPin, setPreviewPin] = useState<Pin | null>(null);
+  const [draftAnnotation, setDraftAnnotation] = useState<Pin | null>(null);
+  const [movingDraftPin, setMovingDraftPin] = useState<Pin | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<OrganMediaItem | null>(null);
+  const [deletedDraftPins, setDeletedDraftPins] = useState<{pin:Pin;index:number}[]>([]);
+  const deleteDraftPin = async (id: string) => {
+    const index = draftPins.findIndex(pin => pin.id === id); if (index < 0) return;
+    setDeletedDraftPins(previous => [...previous.slice(-19),{pin:draftPins[index],index}]);
+    setDraftPins(previous => previous.filter(pin => pin.id !== id)); setPreviewPin(null); setMovingDraftPin(null);
+  };
+  const undoDraftDelete = async () => {
+    const last = deletedDraftPins[deletedDraftPins.length - 1]; if (!last) return;
+    setDraftPins(previous => { const pins = [...previous]; pins.splice(Math.min(last.index,pins.length),0,last.pin); return pins; });
+    setDeletedDraftPins(previous => previous.slice(0,-1)); setPreviewPin(last.pin);
+  };
+  const moveDraftPin = async (pin: Pin, position: Partial<Pin>) => {
+    const changed = {...pin,...position};
+    setDraftPins(previous => previous.map(item => item.id === pin.id ? changed : item)); setPreviewPin(changed); setMovingDraftPin(null);
+  };
+  const placeDraftPin = (position: Partial<Pin> & { x: number; y: number }, is3d: boolean) => {
+    if (movingDraftPin) {
+      const changed = { ...movingDraftPin, ...position, is3d };
+      setDraftPins(previous => previous.map(pin => pin.id === changed.id ? changed : pin)); setPreviewPin(changed); setMovingDraftPin(null);
+    } else setDraftAnnotation({ ...position, is3d, id: '', title: '', description: '' });
+  };
   // Handle 2D File Upload
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -217,7 +231,7 @@ export default function AddOrganModal({
 
     setImage2DFileName(file.name);
     setIsProcessingFile(true);
-    setFileFeedback(`Menyimpan ${file.name} ke database lokal...`);
+    setFileFeedback(`Menyimpan ${file.name} ke server...`);
 
     try {
       const stored = await AnatomyDatabaseService.storeMediaFile(
@@ -232,16 +246,17 @@ export default function AddOrganModal({
       // Update or add to attachedMediaList
       setAttachedMediaList(prev => {
         const copy = [...prev];
-        const existingIdx = copy.findIndex(m => m.type === '2d_image');
+        const existingIdx = appendUploads ? -1 : copy.findIndex(m => m.type === '2d_image');
         const newItem: OrganMediaItem = {
-          id: existingIdx >= 0 ? copy[existingIdx].id : `media-2d-${Date.now()}`,
+          id: 'media-' + crypto.randomUUID(),
           title: `Diagram 2D (${file.name})`,
           type: '2d_image',
           url: stored.blobUrl,
+          mediaFileId: stored.id,
           format: file.name.split('.').pop()?.toLowerCase() || 'png',
           fileName: file.name,
           fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-          isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : true
+          isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : !prev.some(item => item.isDefault)
         };
         if (existingIdx >= 0) copy[existingIdx] = newItem;
         else copy.unshift(newItem);
@@ -251,8 +266,7 @@ export default function AddOrganModal({
       setFileFeedback(`Gambar 2D "${file.name}" berhasil disimpan.`);
     } catch (err) {
       console.error('Failed to store 2D file in database:', err);
-      const blobUrl = URL.createObjectURL(file);
-      setImageUrl(blobUrl);
+      setFileFeedback('Unggah gagal: '+(err as Error).message); setSaveError('Gambar belum tersimpan. Coba unggah kembali.');
     } finally {
       setIsProcessingFile(false);
     }
@@ -288,9 +302,9 @@ export default function AddOrganModal({
       // Update or add to attachedMediaList
       setAttachedMediaList(prev => {
         const copy = [...prev];
-        const existingIdx = copy.findIndex(m => m.type === '3d_model');
+        const existingIdx = appendUploads ? -1 : copy.findIndex(m => m.type === '3d_model');
         const newItem: OrganMediaItem = {
-          id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
+          id: 'media-' + crypto.randomUUID(),
           title: `Model 3D (${file.name})`,
           type: '3d_model',
           url: stored.blobUrl,
@@ -309,342 +323,58 @@ export default function AddOrganModal({
       setFileFeedback(`Berkas 3D "${file.name}" (${ext.toUpperCase()}) siap di-render WebGL.`);
     } catch (err) {
       console.error('Failed to store 3D file in database:', err);
-      const blobUrl = URL.createObjectURL(file);
-      setModel3dData(blobUrl);
+      setFileFeedback('Unggah gagal: '+(err as Error).message); setSaveError('Model belum tersimpan. Coba unggah kembali.');
     } finally {
       setIsProcessingFile(false);
     }
   };
 
-  // Handle 3D Folder Upload (Folder with .obj + .mtl + textures/contour)
-  const handle3DFolderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    
-    // Find .obj file
-    const objFile = fileList.find(f => f.name.toLowerCase().endsWith('.obj'));
-    if (!objFile) {
-      alert('Tidak ditemukan berkas berekstensi .obj di dalam folder yang dipilih. Pastikan folder memuat file .obj!');
-      return;
-    }
-
-    const mtlFile = fileList.find(f => f.name.toLowerCase().endsWith('.mtl'));
-    const textureFiles = fileList.filter(f => {
-      const ext = f.name.split('.').pop()?.toLowerCase();
-      return ['png', 'jpg', 'jpeg', 'webp', 'tga', 'bmp'].includes(ext || '');
-    });
-
-    const folderName = objFile.webkitRelativePath 
-      ? objFile.webkitRelativePath.split('/')[0] 
-      : 'Folder_OBJ_Anatomi';
-
-    setModel3dFileName(`${folderName} (${objFile.name} + ${textureFiles.length} tekstur/kontur)`);
-    setModel3dType('custom_upload');
-    setModel3dFormat('obj_bundle');
-    setIsProcessingFile(true);
-    setFileFeedback(`Membaca folder ${folderName}: ${fileList.length} berkas ditemukan...`);
-
+  const handle3DPackageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files || []); if (!selected.length) return;
+    setIsProcessingFile(true); setSaveError('');
     try {
-      const bundleFiles: StoredBundleFile[] = [];
-
-      if (mtlFile) {
-        bundleFiles.push({
-          name: mtlFile.name,
-          blob: mtlFile,
-          mimeType: 'text/plain',
-          sizeBytes: mtlFile.size
+      let files: PackageFile[];
+      if (selected.length === 1 && selected[0].name.toLowerCase().endsWith('.zip')) {
+        if (selected[0].size > 60 * 1024 * 1024) throw new Error('Arsip maksimal 60 MB.');
+        let bytes = 0; let count = 0;
+        const contents = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
+          selected[0].arrayBuffer().then(buffer => fflate.unzip(new Uint8Array(buffer), { filter: entry => {
+            bytes += entry.originalSize; count++;
+            if (bytes > 60 * 1024 * 1024 || count > 200) { reject(new Error('Paket hasil ekstraksi maksimal 60 MB dan 200 berkas.')); return false; }
+            return true;
+          } }, (error, data) => error ? reject(error) : resolve(data)), reject);
         });
-      }
-
-      for (const tFile of textureFiles) {
-        bundleFiles.push({
-          name: tFile.name,
-          blob: tFile,
-          mimeType: tFile.type || 'image/jpeg',
-          sizeBytes: tFile.size
-        });
-      }
-
-      const stored = await AnatomyDatabaseService.storeMediaFile(
-        objFile,
-        objFile.name,
-        '3d_model',
-        dosenName,
-        customInstitution || institution,
-        undefined,
-        bundleFiles,
-        initialOrgan?.id
-      );
-
-      setModel3dFileId(stored.id);
-      setModel3dData(stored.blobUrl);
-
-      const totalSize = (objFile.size + bundleFiles.reduce((acc, b) => acc + (b.sizeBytes || 0), 0)) / (1024 * 1024);
-      setBundleSummary({
-        objName: objFile.name,
-        mtlName: mtlFile?.name,
-        textureCount: textureFiles.length,
-        totalSizeMB: totalSize.toFixed(2)
+        files = Object.entries(contents).filter(([path, data]) => !path.endsWith('/') && data.length).map(([path, data]) => ({ name: path.split('/').pop()!, path, blob: new Blob([data]) }));
+      } else files = selected.map(file => ({ name: file.name, path: file.webkitRelativePath || file.name, blob: file }));
+      const pack = prepareModelPackage(files);
+      const stored = await AnatomyDatabaseService.storeMediaFile(pack.main.blob, pack.main.name, '3d_model', undefined, undefined, undefined, pack.bundleFiles, initialOrgan?.id);
+      setModel3dFileId(stored.id); setModel3dData(stored.blobUrl); setModel3dType('custom_upload'); setModel3dFormat(pack.format as Supported3DFormat); setModel3dFileName(pack.main.name);
+      setBundleSummary({ objName: pack.main.name, mtlName: pack.bundleFiles.find(file => file.name.toLowerCase().endsWith('.mtl'))?.name, textureCount: pack.bundleFiles.filter(file => ['png','jpg','jpeg','webp','tga','bmp'].includes(file.name.split('.').pop()!.toLowerCase())).length, totalSizeMB: (files.reduce((sum, file) => sum + file.blob.size, 0) / 1024 / 1024).toFixed(2) });
+      setAttachedMediaList(previous => {
+        const index = appendUploads ? -1 : previous.findIndex(item => item.type === '3d_model');
+        const item: OrganMediaItem = { id: 'media-' + crypto.randomUUID(), title: pack.main.name, type: '3d_model', url: stored.blobUrl, format: pack.format, model3dType: 'custom_upload', mediaFileId: stored.id, fileName: pack.main.name, isDefault: index >= 0 ? previous[index].isDefault : !previous.some(item => item.isDefault) };
+        return index < 0 ? [...previous, item] : previous.map((old, i) => i === index ? item : old);
       });
-
-      // Update attachedMediaList
-      setAttachedMediaList(prev => {
-        const copy = [...prev];
-        const existingIdx = copy.findIndex(m => m.type === '3d_model');
-        const newItem: OrganMediaItem = {
-          id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
-          title: `Model 3D Folder OBJ (${folderName})`,
-          type: '3d_model',
-          url: stored.blobUrl,
-          format: 'obj_bundle',
-          model3dType: 'custom_upload',
-          mediaFileId: stored.id,
-          fileName: `${objFile.name} (+${bundleFiles.length} berkas pendukung)`,
-          fileSize: `${totalSize.toFixed(2)} MB`,
-          isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
-        };
-        if (existingIdx >= 0) copy[existingIdx] = newItem;
-        else copy.push(newItem);
-        return copy;
-      });
-
-      setFileFeedback(`✔ Folder OBJ "${folderName}" berhasil disimpan: ${objFile.name}, ${mtlFile ? mtlFile.name : 'tanpa .mtl'}, ${textureFiles.length} berkas kontur/tekstur.`);
-    } catch (err: any) {
-      console.error('Failed to store folder 3D files:', err);
-      alert('Gagal menyimpan folder 3D: ' + (err?.message || String(err)));
-    } finally {
-      setIsProcessingFile(false);
-    }
+      setFileFeedback('Paket tersimpan. Periksa model dan tambahkan notasi di langkah Pratinjau.');
+    } catch(error) { setSaveError((error as Error).message); setFileFeedback('Unggah paket gagal.'); }
+    finally { setIsProcessingFile(false); event.target.value = ''; }
   };
-
-  // Handle 3D ZIP Archive or Multi-File Upload (.zip containing .obj + .mtl + textures)
-  const handle3DZipOrMultiUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    
-    // Check if user uploaded a single ZIP archive
-    if (fileList.length === 1 && fileList[0].name.toLowerCase().endsWith('.zip')) {
-      const zipFile = fileList[0];
-      setIsProcessingFile(true);
-      setFileFeedback(`Mengekstrak arsip ZIP "${zipFile.name}"...`);
-
-      try {
-        const buffer = await zipFile.arrayBuffer();
-        const uint8 = new Uint8Array(buffer);
-
-        const unzipped = await new Promise<{ [key: string]: Uint8Array }>((resolve, reject) => {
-          fflate.unzip(uint8, (err, data) => {
-            if (err) reject(err);
-            else resolve(data);
-          });
-        });
-
-        // Scan unzipped files
-        let objEntry: { name: string; data: Uint8Array } | null = null;
-        let mtlEntry: { name: string; data: Uint8Array } | null = null;
-        const textureEntries: { name: string; data: Uint8Array }[] = [];
-
-        for (const [filePath, fileData] of Object.entries(unzipped)) {
-          if (filePath.endsWith('/') || fileData.length === 0) continue; // skip folder entries
-          const lower = filePath.toLowerCase();
-          const fileName = filePath.split('/').pop() || filePath;
-          
-          if (lower.endsWith('.obj')) {
-            if (!objEntry) objEntry = { name: fileName, data: fileData };
-          } else if (lower.endsWith('.mtl')) {
-            if (!mtlEntry) mtlEntry = { name: fileName, data: fileData };
-          } else {
-            const ext = fileName.split('.').pop()?.toLowerCase();
-            if (['png', 'jpg', 'jpeg', 'webp', 'tga', 'bmp'].includes(ext || '')) {
-              textureEntries.push({ name: fileName, data: fileData });
-            }
-          }
-        }
-
-        if (!objEntry) {
-          alert('Arsip ZIP tidak memuat berkas .obj. Pastikan berkas 3D OBJ berada di dalam file ZIP.');
-          setIsProcessingFile(false);
-          return;
-        }
-
-        const objBlob = new Blob([objEntry.data], { type: 'text/plain' });
-        const bundleFiles: StoredBundleFile[] = [];
-
-        if (mtlEntry) {
-          bundleFiles.push({
-            name: mtlEntry.name,
-            blob: new Blob([mtlEntry.data], { type: 'text/plain' }),
-            mimeType: 'text/plain',
-            sizeBytes: mtlEntry.data.length
-          });
-        }
-
-        for (const t of textureEntries) {
-          const ext = t.name.split('.').pop()?.toLowerCase();
-          const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
-          bundleFiles.push({
-            name: t.name,
-            blob: new Blob([t.data], { type: mime }),
-            mimeType: mime,
-            sizeBytes: t.data.length
-          });
-        }
-
-        const stored = await AnatomyDatabaseService.storeMediaFile(
-          objBlob,
-          objEntry.name,
-          '3d_model',
-          dosenName,
-          customInstitution || institution,
-          undefined,
-          bundleFiles,
-          initialOrgan?.id
-        );
-
-        setModel3dFileName(`${zipFile.name} (${objEntry.name} + ${textureEntries.length} kontur)`);
-        setModel3dType('custom_upload');
-        setModel3dFormat('obj_bundle');
-        setModel3dFileId(stored.id);
-        setModel3dData(stored.blobUrl);
-
-        const totalSize = zipFile.size / (1024 * 1024);
-        setBundleSummary({
-          objName: objEntry.name,
-          mtlName: mtlEntry?.name,
-          textureCount: textureEntries.length,
-          totalSizeMB: totalSize.toFixed(2)
-        });
-
-        // Update attachedMediaList
-        setAttachedMediaList(prev => {
-          const copy = [...prev];
-          const existingIdx = copy.findIndex(m => m.type === '3d_model');
-          const newItem: OrganMediaItem = {
-            id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
-            title: `Model 3D ZIP OBJ (${zipFile.name})`,
-            type: '3d_model',
-            url: stored.blobUrl,
-            format: 'obj_bundle',
-            model3dType: 'custom_upload',
-            mediaFileId: stored.id,
-            fileName: `${objEntry!.name} (+${bundleFiles.length} berkas ZIP)`,
-            fileSize: `${totalSize.toFixed(2)} MB`,
-            isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
-          };
-          if (existingIdx >= 0) copy[existingIdx] = newItem;
-          else copy.push(newItem);
-          return copy;
-        });
-
-        setFileFeedback(`✔ Arsip ZIP diekstrak: ${objEntry.name}, ${mtlEntry ? mtlEntry.name : 'tanpa .mtl'}, ${textureEntries.length} kontur/tekstur.`);
-      } catch (err: any) {
-        console.error('Failed to extract ZIP:', err);
-        alert('Gagal mengekstrak berkas ZIP: ' + (err?.message || String(err)));
-      } finally {
-        setIsProcessingFile(false);
-      }
-      return;
-    }
-
-    // Multi-File selection (.obj + .mtl + .png, etc.)
-    const objFile = fileList.find(f => f.name.toLowerCase().endsWith('.obj'));
-    if (!objFile) {
-      alert('Harap sertakan setidaknya satu berkas .obj!');
-      return;
-    }
-
-    const mtlFile = fileList.find(f => f.name.toLowerCase().endsWith('.mtl'));
-    const textureFiles = fileList.filter(f => {
-      const ext = f.name.split('.').pop()?.toLowerCase();
-      return ['png', 'jpg', 'jpeg', 'webp', 'tga', 'bmp'].includes(ext || '');
-    });
-
-    setIsProcessingFile(true);
-    setFileFeedback(`Menyimpan ${fileList.length} berkas paket OBJ...`);
-
-    try {
-      const bundleFiles: StoredBundleFile[] = [];
-      if (mtlFile) {
-        bundleFiles.push({
-          name: mtlFile.name,
-          blob: mtlFile,
-          mimeType: 'text/plain',
-          sizeBytes: mtlFile.size
-        });
-      }
-      for (const t of textureFiles) {
-        bundleFiles.push({
-          name: t.name,
-          blob: t,
-          mimeType: t.type || 'image/jpeg',
-          sizeBytes: t.size
-        });
-      }
-
-      const stored = await AnatomyDatabaseService.storeMediaFile(
-        objFile,
-        objFile.name,
-        '3d_model',
-        dosenName,
-        customInstitution || institution,
-        undefined,
-        bundleFiles,
-        initialOrgan?.id
-      );
-
-      setModel3dFileName(`${objFile.name} (+${bundleFiles.length} berkas kontur)`);
-      setModel3dType('custom_upload');
-      setModel3dFormat('obj_bundle');
-      setModel3dFileId(stored.id);
-      setModel3dData(stored.blobUrl);
-
-      const totalSize = (objFile.size + bundleFiles.reduce((a, b) => a + (b.sizeBytes || 0), 0)) / (1024 * 1024);
-      setBundleSummary({
-        objName: objFile.name,
-        mtlName: mtlFile?.name,
-        textureCount: textureFiles.length,
-        totalSizeMB: totalSize.toFixed(2)
-      });
-
-      setAttachedMediaList(prev => {
-        const copy = [...prev];
-        const existingIdx = copy.findIndex(m => m.type === '3d_model');
-        const newItem: OrganMediaItem = {
-          id: existingIdx >= 0 ? copy[existingIdx].id : `media-3d-${Date.now()}`,
-          title: `Model 3D Paket OBJ (${objFile.name})`,
-          type: '3d_model',
-          url: stored.blobUrl,
-          format: 'obj_bundle',
-          model3dType: 'custom_upload',
-          mediaFileId: stored.id,
-          fileName: `${objFile.name} (+${bundleFiles.length} berkas)`,
-          fileSize: `${totalSize.toFixed(2)} MB`,
-          isDefault: existingIdx >= 0 ? copy[existingIdx].isDefault : false
-        };
-        if (existingIdx >= 0) copy[existingIdx] = newItem;
-        else copy.push(newItem);
-        return copy;
-      });
-
-      setFileFeedback(`✔ Berkas paket OBJ disimpan: ${objFile.name}, ${mtlFile ? mtlFile.name : 'tanpa .mtl'}, ${textureFiles.length} kontur.`);
-    } catch (err: any) {
-      console.error('Failed to store OBJ bundle files:', err);
-      alert('Gagal menyimpan berkas OBJ: ' + (err?.message || String(err)));
-    } finally {
-      setIsProcessingFile(false);
-    }
-  };
+  const handle3DFolderUpload = handle3DPackageUpload;
+  const handle3DZipOrMultiUpload = handle3DPackageUpload;
 
   // Handle setting Embed URL (Sketchfab & Google Drive)
   const handleEmbedUrlChange = (urlValue: string, customTitle?: string) => {
     const embedInfo = normalizeEmbedUrl(urlValue);
     const resolvedUrl = embedInfo.isValid ? embedInfo.normalizedEmbedUrl : urlValue;
-    setEmbed3dUrl(resolvedUrl);
-    if (!urlValue) return;
+    setEmbed3dUrl(urlValue);
+    if (!urlValue.trim()) {
+      setAttachedMediaList(prev => {
+        const first = prev.find(item => item.type === '3d_embed');
+        const remaining = prev.filter(item => item.id !== first?.id);
+        return remaining.map((item, index) => ({ ...item, isDefault: remaining.some(media => media.isDefault) ? item.isDefault : index === 0 }));
+      });
+      return;
+    }
 
     const resolvedTitle = customTitle || (
       embedInfo.sourceType === 'sketchfab' ? 'Sketchfab 3D Embed' :
@@ -676,11 +406,16 @@ export default function AddOrganModal({
       return;
     }
 
+    let resolvedUrl = extraMediaUrl.trim();
+    if (extraMediaType === '3d_embed') {
+      try { resolvedUrl = (await resolveEmbedUrl(resolvedUrl)).normalizedEmbedUrl; }
+      catch (error) { setSaveError((error as Error).message); return; }
+    }
     const newItem: OrganMediaItem = {
       id: `media-extra-${Date.now()}`,
       title: extraMediaTitle.trim(),
       type: extraMediaType,
-      url: extraMediaUrl.trim(),
+      url: resolvedUrl,
       format: extraMediaFormat,
       isDefault: false
     };
@@ -714,23 +449,41 @@ export default function AddOrganModal({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [organId]=useState(initialOrgan?.id || `custom-organ-${crypto.randomUUID()}`);
+  const [status,setStatus]=useState<'draft'|'published'>(initialOrgan?.status || 'draft');
+  const [step,setStep]=useState(0);
+  const [saving,setSaving]=useState(false);
+  const snapshot=JSON.stringify({name,latinName,system,subSystem,standard,dosenName,dosenCode,institution,customInstitution,imageUrl,model3dType,model3dFormat,model3dData,embed3dUrl,attachedMediaList,draftPins,description,functionMain,vascularization,innervation,clinicalNotes,isFree,status});
+  const initialSnapshot=useRef(snapshot);
+  const dirty=snapshot!==initialSnapshot.current;
+  const [decision,setDecision]=useState<'close'|'reload'|null>(null);
+  const requestClose=()=>{if(saving)return;if(dirty)setDecision('close');else onClose();};
+  const requestReload=async()=>{if(dirty)setDecision('reload');else await onReload?.();};
+  useEffect(()=>{if(!dirty && !saving)return;const guard=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',guard);return ()=>window.removeEventListener('beforeunload',guard);},[dirty,saving]);
+  const [saveError,setSaveError]=useState('');
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalInstitution = customInstitution.trim() || institution.trim() || 'Koleksi Mandiri / Terbuka';
+    if(saving || isProcessingFile) return;
+    if(step!==3){setStep(step+1);return;}
+    const finalInstitution = generalAdmin(currentUser) ? institutionName(institution) : institutionName(currentUser?.institution);
 
     if (!name.trim() || !latinName.trim() || !subSystem.trim() || !description.trim()) {
       alert('Mohon lengkapi seluruh bidang bertanda bintang (*).');
       return;
     }
 
+    if (!attachedMediaList.length) { alert('Tambahkan setidaknya satu gambar atau model sebelum menyimpan.'); return; }
+    const orphaned = draftPins.filter(pin => !attachedMediaList.some(item => item.id === pin.mediaId));
+    if(orphaned.length && !confirm(orphaned.length + ' notasi pada media yang dihapus atau diganti akan ikut dihapus. Simpan perubahan?')) return;
     // Determine primary media item
     const defaultMedia = attachedMediaList.find(m => m.isDefault) || attachedMediaList[0];
-    const finalImageUrl = imageUrl || (
-      attachedMediaList.find(m => m.type === '2d_image')?.url || PRESET_ILLUSTRATIONS_2D[0].url
-    );
+    const primaryImage = attachedMediaList.find(m => m.type === '2d_image' && m.isDefault) || attachedMediaList.find(m => m.type === '2d_image');
+    const primaryModel = attachedMediaList.find(m => m.type === '3d_model' && m.isDefault) || attachedMediaList.find(m => m.type === '3d_model');
 
     const organData: Organ = {
-      id: initialOrgan?.id || `custom-organ-${Date.now()}`,
+      ...initialOrgan,
+      status,
+      id: organId,
       name: name.trim(),
       latinName: latinName.trim(),
       system,
@@ -740,29 +493,34 @@ export default function AddOrganModal({
       dosenCode: dosenCode.trim(),
       institution: finalInstitution,
       mediaType: defaultMedia?.type || '2d_image',
-      imageUrl: finalImageUrl,
-      model3dType: model3dType,
-      model3dData: model3dData,
-      model3dFormat: model3dFormat,
-      mediaFileId: model3dFileId,
-      embed3dUrl: embed3dUrl || attachedMediaList.find(m => m.type === '3d_embed')?.url,
+      imageUrl: primaryImage?.url || '',
+      model3dType: primaryModel?.model3dType,
+      model3dData: primaryModel?.url,
+      model3dFormat: primaryModel?.format as Supported3DFormat | undefined,
+      mediaFileId: primaryModel?.mediaFileId,
+      embed3dUrl: attachedMediaList.find(m => m.type === '3d_embed')?.url,
       mediaItems: attachedMediaList, // Full Multi-Media & Multi-Object Array
       description: description.trim(),
-      functionMain: functionMain.trim() || 'Fungsi fisiologis terstandarisasi kurikulum.',
-      vascularization: vascularization.trim() || 'Vaskularisasi arteri & vena terkait.',
-      innervation: innervation.trim() || 'Inervasi saraf somatik/otonom.',
-      clinicalNotes: clinicalNotes.trim() || 'Catatan korelasi klinis dan patofisiologi.',
+      functionMain: functionMain.trim(),
+      vascularization: vascularization.trim(),
+      innervation: innervation.trim(),
+      clinicalNotes: clinicalNotes.trim(),
       isFree,
-      pins: initialOrgan?.pins || [],
+      pins: draftPins.filter(pin => attachedMediaList.some(item => item.id === pin.mediaId)),
       updatedAt: new Date().toISOString()
     };
 
-    onSave(organData);
+    setSaving(true); setSaveError('');
+    try {
+      const mediaItems = await Promise.all(organData.mediaItems!.map(async item => item.type === '3d_embed'
+        ? { ...item, url: (await resolveEmbedUrl(item.url)).normalizedEmbedUrl } : item));
+      await onSave({ ...organData, mediaItems, embed3dUrl: mediaItems.find(item => item.type === '3d_embed')?.url });
+    } catch(e) { setSaveError((e as Error).message); } finally { setSaving(false); }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden ${
+      <div role="dialog" aria-modal="true" aria-label="Editor materi anatomi" className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden ${
         isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         
@@ -779,13 +537,14 @@ export default function AddOrganModal({
                 {initialOrgan ? 'Edit Materi & Objek Anatomi' : 'Tambah Organ Anatomi Baru'}
               </h2>
               <p className="text-xs text-slate-400">
-                Mendukung unggah sekaligus: Berkas 2D, Model 3D (.GLB/.OBJ/.STL), dan Embed Interaktif dalam 1 Item
+                Unggah gambar, model 3D, atau paket model beserta teksturnya; tambahkan notasi di Pratinjau.
               </p>
             </div>
           </div>
           
           <button
-            onClick={onClose}
+            type="button" aria-label="Tutup editor materi"
+            onClick={requestClose}
             className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -793,8 +552,11 @@ export default function AddOrganModal({
         </div>
 
         {/* Modal Form Scroll Area */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex shrink-0 gap-2 px-6 py-3 overflow-x-auto">{['Identitas','Media','Isi & akses','Pratinjau'].map((label,i)=><button type="button" key={label} disabled={saving} onClick={()=>setStep(i)} className={`shrink-0 min-h-11 whitespace-nowrap px-3 py-2 rounded-lg text-sm ${step===i?'bg-teal-500 text-slate-950':'border border-slate-500'}`}>{i+1}. {label}</button>)}</div>
+        <form noValidate onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
+          <fieldset disabled={saving} className="contents">
           
+          <div hidden={step!==0}>
           {/* Section 1: Curriculum Standard & Institution Attribution */}
           <div className={`p-4 rounded-xl border space-y-3 ${
             isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
@@ -868,12 +630,13 @@ export default function AddOrganModal({
             <div className="space-y-1.5 pt-1">
               <label className="block text-xs font-bold text-amber-300 flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                Asal Institusi / Fakultas Kedokteran Dosen *
+                Instansi pemilik materi *
               </label>
               
               <div className="space-y-2">
                 <select
                   value={institution}
+                  disabled={!generalAdmin(currentUser) || Boolean(initialOrgan)}
                   onChange={(e) => {
                     setInstitution(e.target.value);
                     if (e.target.value !== 'OTHER') {
@@ -884,11 +647,11 @@ export default function AddOrganModal({
                     isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
                   }`}
                 >
-                  {KNOWN_INSTITUTIONS.map((inst) => (
+                  {registeredInstitutions.map((inst) => (
                     <option key={inst} value={inst}>{inst}</option>
                   ))}
-                  <option value="OTHER">+ Tulis Nama Institusi Lain...</option>
                 </select>
+                <p className="text-[10px] text-slate-400">Materi tersimpan di {institutionName(institution)}. Untuk instansi lain, buat salinan melalui Koleksi Organ.</p>
 
                 {institution === 'OTHER' && (
                   <input
@@ -951,16 +714,7 @@ export default function AddOrganModal({
                   isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
                 }`}
               >
-                <option value="1. Anatomi dan Embriologi Umum">1. Anatomi dan Embriologi Umum</option>
-                <option value="2. Sistem Saraf (Systema Nervosum)">2. Sistem Saraf (Systema Nervosum)</option>
-                <option value="3. Sistem Kardiovaskular (Systema Cardiovasculare)">3. Sistem Kardiovaskular (Systema Cardiovasculare)</option>
-                <option value="4. Sistem Respirasi (Systema Respiratorium)">4. Sistem Respirasi (Systema Respiratorium)</option>
-                <option value="5. Sistem Pencernaan (Systema Digestorium)">5. Sistem Pencernaan (Systema Digestorium)</option>
-                <option value="6. Sistem Urogenital (Systema Urogenitale)">6. Sistem Urogenital (Systema Urogenitale)</option>
-                <option value="7. Sistem Endokrin (Systema Endocrinum)">7. Sistem Endokrin (Systema Endocrinum)</option>
-                <option value="8. Sistem Muskuloskeletal (Systema Musculoskeletale)">8. Sistem Muskuloskeletal (Systema Musculoskeletale)</option>
-                <option value="9. Sistem Integumen (Integumentum Commune)">9. Sistem Integumen (Integumentum Commune)</option>
-                <option value="10. Organa Sensuum (Panca Indera)">10. Organa Sensuum (Panca Indera)</option>
+                {Array.from(new Set([system, ...INITIAL_ORGANS.map(o => o.system)])).map(value => <option key={value} value={value}>{value}</option>)}
               </select>
             </div>
 
@@ -981,6 +735,7 @@ export default function AddOrganModal({
             </div>
           </div>
 
+          </div><div hidden={step!==1}>
           {/* Section 3: Multi-Media Upload & Configuration in 1 Item */}
           <div className={`p-4 rounded-xl border space-y-4 ${
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
@@ -1041,10 +796,10 @@ export default function AddOrganModal({
                         onClick={() => {
                           setImageUrl(p.url);
                           setAttachedMediaList(prev => {
-                            const copy = [...prev];
-                            const idx = copy.findIndex(m => m.type === '2d_image');
-                            if (idx >= 0) copy[idx].url = p.url;
-                            return copy;
+                            const idx = appendUploads ? -1 : prev.findIndex(m => m.type === '2d_image');
+                            if (idx >= 0 && prev[idx].url === p.url) return prev;
+                            const item: OrganMediaItem = { id: 'media-' + crypto.randomUUID(), title: p.name, type: '2d_image', url: p.url, isDefault: idx >= 0 ? prev[idx].isDefault : !prev.some(media => media.isDefault) };
+                            return idx < 0 ? [...prev, item] : prev.map((media, index) => index === idx ? item : media);
                           });
                         }}
                         className="text-[9px] px-1.5 py-0.5 rounded border border-slate-800 bg-slate-950 text-slate-300 hover:text-teal-300 cursor-pointer"
@@ -1056,7 +811,8 @@ export default function AddOrganModal({
                 </div>
               </div>
 
-              {/* Card 2: 3D Model File (GLB / OBJ / STL / FBX or Folder / ZIP) */}
+              <label className="block text-sm md:col-span-3 md:order-first"><input type="checkbox" checked={appendUploads} onChange={event => setAppendUploads(event.target.checked)} className="mr-2" />Tambahkan unggahan sebagai media baru</label>
+            {/* Card 2: 3D Model File (GLB / OBJ / STL / FBX or Folder / ZIP) */}
               <div className={`p-3 rounded-xl border flex flex-col justify-between space-y-2.5 ${
                 isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
               }`}>
@@ -1065,7 +821,7 @@ export default function AddOrganModal({
                     <Box className="w-3.5 h-3.5" /> 2. Objek 3D (WebGL)
                   </span>
                   <span className="text-[9px] font-mono text-slate-400">
-                    {upload3DMode === 'folder' ? 'Folder OBJ' : upload3DMode === 'zip' ? 'Paket ZIP' : 'Berkas 3D'}
+                    {upload3DMode === 'folder' ? 'Folder model' : upload3DMode === 'zip' ? 'Paket ZIP' : 'Berkas 3D'}
                   </span>
                 </div>
 
@@ -1091,7 +847,7 @@ export default function AddOrganModal({
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <Folder className="w-2.5 h-2.5" /> Folder OBJ
+                    <Folder className="w-2.5 h-2.5" /> Folder
                   </button>
                   <button
                     type="button"
@@ -1115,7 +871,7 @@ export default function AddOrganModal({
                     <span className="text-[11px] text-slate-300 font-medium text-center truncate max-w-[170px]">
                       {model3dFileName || 'Upload Berkas 3D Tunggal'}
                     </span>
-                    <span className="text-[9px] text-slate-400 font-mono">.fbx, .obj, .glb, .3ds</span>
+                    <span className="text-[9px] text-slate-400 font-mono">GLB, GLTF, OBJ, STL, FBX, 3DS</span>
                     <input
                       type="file"
                       accept=".glb, .gltf, .obj, .stl, .fbx, .3ds, model/gltf-binary"
@@ -1131,10 +887,10 @@ export default function AddOrganModal({
                   }`}>
                     <Folder className="w-4 h-4 text-teal-400 mb-1" />
                     <span className="text-[11px] text-teal-300 font-medium text-center truncate max-w-[170px]">
-                      {model3dFileName || 'Pilih Folder OBJ & Kontur'}
+                      {model3dFileName || 'Pilih folder model & tekstur'}
                     </span>
                     <span className="text-[9px] text-slate-400 text-center px-1">
-                      Folder berisi .obj + .mtl + kontur/tekstur
+                      OBJ + MTL/tekstur atau GLTF + BIN/tekstur
                     </span>
                     <input
                       type="file"
@@ -1155,11 +911,11 @@ export default function AddOrganModal({
                       {model3dFileName || 'Upload ZIP / Multi-Berkas'}
                     </span>
                     <span className="text-[9px] text-slate-400 text-center px-1">
-                      Arsip .zip atau pilih .obj + .mtl + .png
+                      ZIP atau pilih model beserta berkas pendukungnya
                     </span>
                     <input
                       type="file"
-                      accept=".zip, .obj, .mtl, .png, .jpg, .jpeg, .webp, .tga"
+                      accept=".zip,.glb,.gltf,.bin,.obj,.mtl,.stl,.fbx,.3ds,.png,.jpg,.jpeg,.webp,.tga,.bmp"
                       multiple
                       onChange={handle3DZipOrMultiUpload}
                       className="hidden"
@@ -1173,35 +929,36 @@ export default function AddOrganModal({
                     <div className="flex items-center justify-between text-teal-300 font-semibold">
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-teal-400" />
-                        Paket OBJ Siap
+                        Paket 3D siap
                       </span>
                       <span>{bundleSummary.totalSizeMB} MB</span>
                     </div>
                     <p className="text-[9px] text-slate-400 truncate">
-                      {bundleSummary.objName} • {bundleSummary.mtlName || 'No MTL'} • {bundleSummary.textureCount} kontur
+                      {bundleSummary.objName} • {bundleSummary.mtlName || 'Berkas pendukung disertakan'} • {bundleSummary.textureCount} tekstur
                     </p>
                   </div>
                 )}
 
                 {/* 3D Preset Selection */}
                 <div>
-                  <span className="text-[9px] font-mono text-slate-400 block mb-1">Preset Fallback:</span>
+                  <span className="text-[9px] font-mono text-slate-400 block mb-1">Model 3D bawaan (opsional):</span>
                   <select
                     value={model3dType}
                     onChange={(e) => {
                       const val = e.target.value as Model3DPreset;
                       setModel3dType(val);
                       setAttachedMediaList(prev => {
-                        const copy = [...prev];
-                        const idx = copy.findIndex(m => m.type === '3d_model');
-                        if (idx >= 0) copy[idx].model3dType = val;
-                        return copy;
+                        const idx = prev.findIndex(m => m.type === '3d_model' && !m.url && !m.mediaFileId);
+                        if (idx >= 0 && prev[idx].model3dType === val) return prev;
+                        const preset: OrganMediaItem = { id: 'media-' + crypto.randomUUID(), title: 'Model bawaan ' + val, type: '3d_model', url: '', model3dType: val, isDefault: idx >= 0 ? prev[idx].isDefault : !prev.some(item => item.isDefault) };
+                        return idx >= 0 ? prev.map((item, index) => index === idx ? preset : item) : [...prev, preset];
                       });
                     }}
                     className={`w-full rounded border px-1.5 py-0.5 text-[10px] ${
                       isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-300'
                     }`}
                   >
+                    <option value="custom_upload" disabled>Berkas unggahan aktif</option>
                     <option value="heart">Cor (Jantung 3D Prosedural)</option>
                     <option value="brain">Cerebrum (Otak 3D)</option>
                     <option value="lungs">Pulmo (Paru 3D)</option>
@@ -1224,8 +981,8 @@ export default function AddOrganModal({
 
                 <div className="space-y-1">
                   <input
-                    type="url"
-                    placeholder="Tempel link Sketchfab atau Google Drive..."
+                    type="text"
+                    placeholder="Tempel URL model, skfb.ly, atau kode iframe..."
                     value={embed3dUrl}
                     onChange={(e) => handleEmbedUrlChange(e.target.value)}
                     className={`w-full rounded border px-2 py-1.5 text-xs focus:outline-none focus:border-teal-500 ${
@@ -1233,10 +990,8 @@ export default function AddOrganModal({
                     }`}
                   />
                   {embed3dUrl && (
-                    <div className="text-[9px] font-mono text-teal-400 truncate">
-                      {embed3dUrl.includes('sketchfab') ? '✓ Terdeteksi: Sketchfab 3D Embed' :
-                       embed3dUrl.includes('drive.google.com') ? '✓ Terdeteksi: Google Drive Embed Preview' :
-                       '✓ Embed Link Aktif'}
+                    <div role="status" className={`text-[9px] ${normalizeEmbedUrl(embed3dUrl).isValid ? 'text-teal-400' : 'text-amber-400'}`}>
+                      {normalizeEmbedUrl(embed3dUrl).previewTitle}
                     </div>
                   )}
                 </div>
@@ -1427,6 +1182,7 @@ export default function AddOrganModal({
             </div>
           </div>
 
+          </div><div hidden={step!==2}>
           {/* Section 4: Medical Descriptions & Correlations */}
           <div className="space-y-3">
             <div>
@@ -1517,13 +1273,14 @@ export default function AddOrganModal({
                 Hak Akses Publik (Guest Free Access)
               </span>
               <span className="text-[11px] text-slate-400">
-                Jika diaktifkan, modul organ ini dapat diakses oleh pengunjung tanpa perlu login.
+                {institutionName(institution)==='General' ? 'Materi General dapat dibaca pengunjung tanpa login jika diaktifkan.' : 'Materi instansi hanya tersedia untuk akun instansi tersebut dan admin General.'}
               </span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={isFree}
+                disabled={institutionName(institution)!=='General'}
+                checked={institutionName(institution)==='General' && isFree}
                 onChange={(e) => setIsFree(e.target.checked)}
                 className="sr-only peer"
               />
@@ -1531,11 +1288,31 @@ export default function AddOrganModal({
             </label>
           </div>
 
+          </div>
+          {step===3 && <section className="space-y-4">
+            <h3 className="text-xl font-bold">{name || 'Nama belum diisi'}</h3><p>{latinName} · {system} · {subSystem}</p>
+            <p className="text-sm text-slate-400">Pilih media, aktifkan Tambah notasi, lalu klik bagian gambar atau permukaan model. Notasi ikut disimpan saat Anda menyimpan materi.</p>
+            <div className="h-[520px] border rounded-xl overflow-hidden">
+              <AnatomyCanvas selectedOrgan={{...initialOrgan,id:organId,name,latinName,system,subSystem,description,functionMain,vascularization,innervation,clinicalNotes,isFree,pins:draftPins,imageUrl,mediaItems:attachedMediaList,model3dData,model3dFormat,model3dType,embed3dUrl}} selectedPin={previewPin} onSelectPin={setPreviewPin} onMovePin={moveDraftPin} onDeletePin={deleteDraftPin} onEditPin={setDraftAnnotation} onUndoDelete={undoDraftDelete} canUndoDelete={deletedDraftPins.length > 0} currentRole={currentUser?.role || 'ADMIN'} onActiveMediaChange={setPreviewMedia} repositionPin={movingDraftPin} onCancelReposition={() => setMovingDraftPin(null)} onCanvas2DClick={(x,y,mediaId) => placeDraftPin({x,y,mediaId},false)} onPinPlaced3D={position => placeDraftPin(position,true)} onUnlockRequest={()=>{}} theme={theme}/>
+            </div>
+            <div className="space-y-2">{draftPins.filter(pin => attachedMediaList.some(item => item.id === pin.mediaId)).map(pin => <div key={pin.id} className="rounded-xl border border-slate-500/30 p-3 flex flex-wrap gap-3 items-center">
+              <button type="button" className="text-left flex-1 min-w-0" onClick={() => setPreviewPin(pin)}><strong className="block text-sm">{pin.title}</strong><span className="text-xs text-slate-400">{attachedMediaList.find(item => item.id === pin.mediaId)?.title} · {pin.is3d ? '3D' : '2D'}</span></button>
+              <button type="button" className="text-sm text-teal-500" onClick={() => setDraftAnnotation(pin)}>Edit</button>
+              <button type="button" className="text-sm text-rose-500" onClick={() => { void deleteDraftPin(pin.id); }}>Hapus</button>
+            </div>)}</div>
+            {draftPins.some(pin => !attachedMediaList.some(item => item.id === pin.mediaId)) && <p className="text-sm text-amber-500">Notasi pada media yang dihapus atau diganti akan ikut dihapus setelah konfirmasi saat menyimpan.</p>}
+            <p className="whitespace-pre-wrap">{description}</p><p>{attachedMediaList.length} media · {draftPins.filter(pin => attachedMediaList.some(item => item.id === pin.mediaId)).length} notasi</p>
+          </section>}
+          {step===3 && <label className="block">Status materi<select className="ml-3 bg-slate-800 text-white p-2 rounded" value={status} onChange={e=>setStatus(e.target.value as 'draft'|'published')}><option value="draft">Draf (hanya pemilik & admin)</option><option value="published">Terbitkan</option></select></label>}
+          {saveError && <div role="alert" className="text-red-400"><p>{saveError}</p>{initialOrgan && onReload && <button type="button" className="mt-3 underline" onClick={requestReload}>Muat versi terbaru</button>}</div>}
+          {decision && <div role="alertdialog" aria-label="Konfirmasi perubahan belum disimpan" className="rounded-xl border border-amber-500 p-4 space-y-3"><p>Perubahan editor belum disimpan. {decision==='reload'?'Memuat versi terbaru akan mengganti isi editor.':'Menutup editor akan membuang perubahan.'}</p><button type="button" className="border rounded-lg px-3 py-2" onClick={()=>setDecision(null)}>Lanjut mengedit</button><button type="button" className="ml-3 bg-amber-400 text-slate-950 rounded-lg px-3 py-2" onClick={async()=>{const action=decision;setDecision(null);if(action==='close')onClose();else await onReload?.();}}>{decision==='reload'?'Muat versi server':'Buang perubahan dan tutup'}</button></div>}
+          {step>0 && <button type="button" onClick={()=>setStep(step-1)}>← Sebelumnya</button>}
+          {step<3 && <button type="button" className="ml-4 bg-teal-500 text-slate-950 rounded-lg px-4 py-2" onClick={()=>setStep(step+1)}>Lanjut →</button>}
           {/* Submit Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                 isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
@@ -1544,17 +1321,23 @@ export default function AddOrganModal({
             </button>
 
             <button
+              hidden={step!==3}
               type="submit"
-              disabled={isProcessingFile}
+              disabled={isProcessingFile || saving}
               className="px-5 py-2 rounded-xl bg-teal-500 text-slate-950 text-xs font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-400 transition-all cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
-              <span>Simpan Seluruh Objek Organ</span>
+              <span>{saving ? 'Menyimpan…' : 'Simpan materi'}</span>
             </button>
           </div>
 
+          </fieldset>
         </form>
       </div>
+      {draftAnnotation && <AddPinModal key={draftAnnotation.id || 'new'} x={draftAnnotation.x} y={draftAnnotation.y} z={draftAnnotation.z} is3d={draftAnnotation.is3d} initialPin={draftAnnotation.id ? draftAnnotation : null} mediaTitle={attachedMediaList.find(item => item.id === draftAnnotation.mediaId)?.title} onClose={() => setDraftAnnotation(null)} onSave={async data => {
+        const pin = { ...draftAnnotation, ...data, id: draftAnnotation.id || 'pin-' + crypto.randomUUID() };
+        setDraftPins(previous => previous.some(item => item.id === pin.id) ? previous.map(item => item.id === pin.id ? pin : item) : [...previous, pin]); setPreviewPin(pin); setDraftAnnotation(null);
+      }} theme={theme} />}
     </div>
   );
 }

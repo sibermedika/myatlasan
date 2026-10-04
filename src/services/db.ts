@@ -1,40 +1,10 @@
+import { pinMediaId } from '../utils/annotations';
+import { api, blobBase64, decodeBlob } from './api';
 import { Organ, OrganMediaItem, UserProfile, StoredMediaFile, StoredBundleFile, InstitutionCluster, Supported2DFormat, Supported3DFormat } from '../types';
 import { INITIAL_ORGANS } from '../data';
+import { institutionName } from '../../shared/institutions.mjs';
 
-const DB_NAME = 'AnatoVerse_Anatomy_DB';
-const DB_VERSION = 4;
-const KEY_USERS_LOCAL_STORAGE = 'anatoverse_all_registered_users_v2';
-
-// Production Admin & Dosen Accounts (Official Credentials)
-export const DEFAULT_SUPERADMIN_PASSWORD = 'Sup3r@dm1n';
-export const DEFAULT_ADMIN_PASSWORD = 'Sup3r@dm1n';
-export const DEFAULT_DOSEN_PASSWORD = 'dosen123';
-
-export const OFFICIAL_SUPERADMIN: UserProfile = {
-  id: 'admin-master',
-  name: 'Admin Master Anatomi',
-  email: 'admin',
-  password: DEFAULT_ADMIN_PASSWORD,
-  role: 'ADMIN',
-  identifierNumber: 'admin',
-  institution: 'Konsorsium Anatomi Nasional',
-  specialization: 'Master Administrator Kurikulum Anatomi PAAI 2019',
-  dosenCode: 'ADMIN-MASTER'
-};
-
-export const OFFICIAL_ADMIN: UserProfile = OFFICIAL_SUPERADMIN;
-
-export const OFFICIAL_DOSEN: UserProfile = {
-  id: 'dosen-paijo',
-  name: 'dr. Paijo',
-  email: 'dosen',
-  password: DEFAULT_DOSEN_PASSWORD,
-  role: 'DOSEN',
-  identifierNumber: 'dosen',
-  institution: 'Fakultas Kedokteran',
-  specialization: 'Dosen Anatomi Klinis & Pengembang Konten 3D',
-  dosenCode: 'DOSEN-001'
-};
+export const MASTER_ADMIN_ID = 'admin-master';
 
 // Standard Curriculum References (Standards !== Institutions)
 export const KNOWN_STANDARDS: string[] = [
@@ -67,56 +37,8 @@ export const KNOWN_INSTITUTIONS: string[] = [
   'RSUD Dr. Soetomo Surabaya'
 ];
 
-// In-Memory Blob URL registry to reuse created Object URLs and avoid memory leaks
-const blobUrlRegistry = new Map<string, string>();
-
-/**
- * Open or upgrade IndexedDB
- */
-function openIndexedDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined' || !window.indexedDB) {
-      reject(new Error('IndexedDB is not supported in this browser/environment'));
-      return;
-    }
-
-    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-
-      // 1. Organ Object Store (Stores metadata, pins, systems)
-      if (!db.objectStoreNames.contains('organs')) {
-        const organStore = db.createObjectStore('organs', { keyPath: 'id' });
-        organStore.createIndex('system', 'system', { unique: false });
-        organStore.createIndex('institution', 'institution', { unique: false });
-        organStore.createIndex('dosenCode', 'dosenCode', { unique: false });
-      }
-
-      // 2. Media Files (Stores large binary Blobs for GLB, GLTF, FBX, OBJ, STL, Images)
-      if (!db.objectStoreNames.contains('media_files')) {
-        const mediaStore = db.createObjectStore('media_files', { keyPath: 'id' });
-        mediaStore.createIndex('category', 'category', { unique: false });
-        mediaStore.createIndex('extension', 'extension', { unique: false });
-        mediaStore.createIndex('institution', 'institution', { unique: false });
-      }
-
-      // 3. User Accounts (Superadmin + Registered Lecturers/Students)
-      if (!db.objectStoreNames.contains('users')) {
-        const userStore = db.createObjectStore('users', { keyPath: 'id' });
-        userStore.createIndex('email', 'email', { unique: false });
-        userStore.createIndex('role', 'role', { unique: false });
-        userStore.createIndex('institution', 'institution', { unique: false });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB'));
-  });
-}
-
 export class AnatomyDatabaseService {
-  private static isInitialized = false;
+
 
   /**
    * Initialize Database and seed default curriculum if empty
@@ -129,28 +51,7 @@ export class AnatomyDatabaseService {
    * Initialize Database and seed default curriculum if empty
    */
   static async initDB(): Promise<Organ[]> {
-    try {
-      const existingOrgans = await this.getAllOrgans();
-
-      if (existingOrgans.length === 0) {
-        // Seed initial organs with standard "Standar Kurikulum Nasional PAAI 2019" and institution "Koleksi Mandiri / Terbuka"
-        const seededOrgans: Organ[] = INITIAL_ORGANS.map(o => ({
-          ...o,
-          standard: o.standard || DEFAULT_STANDARD,
-          institution: o.institution || 'Koleksi Mandiri / Terbuka'
-        }));
-
-        await this.saveAllOrgans(seededOrgans);
-        this.isInitialized = true;
-        return seededOrgans;
-      }
-
-      this.isInitialized = true;
-      return existingOrgans;
-    } catch (err) {
-      console.warn('IndexedDB init warning, returning default in-memory state:', err);
-      return INITIAL_ORGANS;
-    }
+    return api<Organ[]>('/organs');
   }
 
   static async bulkSaveOrgans(organs: Organ[]): Promise<void> {
@@ -158,44 +59,30 @@ export class AnatomyDatabaseService {
   }
 
   /**
-   * Retrieve all anatomical organs from IndexedDB
+   * Retrieve all anatomical organs from server
    */
   static async getAllOrgans(): Promise<Organ[]> {
-    try {
-      const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('organs', 'readonly');
-        const store = tx.objectStore('organs');
-        const request = store.getAll();
-
-        request.onsuccess = () => {
-          const list = request.result || [];
-          resolve(list);
-        };
-        request.onerror = () => reject(request.error);
-      });
-    } catch (e) {
-      console.error('Failed to get organs from IndexedDB:', e);
-      return INITIAL_ORGANS;
-    }
+    return api<Organ[]>('/organs');
   }
 
   /**
-   * Save a single organ to IndexedDB
+   * Save a single organ to server
    */
-  static async saveOrgan(organ: Organ): Promise<void> {
+  static async saveOrgan(organ: Organ): Promise<Organ> {
+    const media = this.resolveOrganMediaItems(organ);
+    organ = { ...organ, pins: organ.pins.map(pin => ({ ...pin, title: pin.title.trim(), description: pin.description.trim(), mediaId: pinMediaId(pin, media), is3d: Boolean(pin.is3d || pin.z !== undefined) })) };
+    const url = '/organs/' + encodeURIComponent(organ.id);
     try {
-      const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('organs', 'readwrite');
-        const store = tx.objectStore('organs');
-        const request = store.put(organ);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    } catch (e) {
-      console.error('Failed to save organ in IndexedDB:', e);
+      return await api<Organ>(url, {method:'PUT',body:JSON.stringify(organ)});
+    } catch (error) {
+      // A lost response can occur after the server commits. Confirm the exact
+      // intended revision before retrying, without overwriting another edit.
+      try {
+        const saved = await api<Organ>(url);
+        const fields: (keyof Organ)[] = ['name','latinName','system','subSystem','description','functionMain','vascularization','innervation','clinicalNotes','isFree','status','imageUrl','model3dData','embed3dUrl','model3dType','model3dFormat','pins','mediaItems','mediaSource','mediaCredit','mediaLicense','mediaLicenseUrl','mediaOverview'];
+        if (saved.version === (organ.version || 0) + 1 && fields.every(key => JSON.stringify(saved[key] ?? null) === JSON.stringify(organ[key] ?? null))) return saved;
+      } catch { /* Preserve the original save error when confirmation is unavailable. */ }
+      throw error;
     }
   }
 
@@ -203,58 +90,25 @@ export class AnatomyDatabaseService {
    * Save multiple organs (batch update / import)
    */
   static async saveAllOrgans(organs: Organ[]): Promise<void> {
-    try {
-      const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('organs', 'readwrite');
-        const store = tx.objectStore('organs');
-        store.clear();
-        for (const organ of organs) {
-          store.put(organ);
-        }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } catch (e) {
-      console.error('Failed to save all organs in IndexedDB:', e);
-    }
+    await api('/organs/import',{method:'POST',body:JSON.stringify(organs)});
   }
 
   /**
    * Delete an organ by ID
    */
-  static async deleteOrgan(organId: string): Promise<void> {
-    try {
-      const db = await openIndexedDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('organs', 'readwrite');
-        const store = tx.objectStore('organs');
-        const request = store.delete(organId);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    } catch (e) {
-      console.error('Failed to delete organ from IndexedDB:', e);
-    }
+  static async deleteOrgan(organId: string, version: number): Promise<void> {
+    await api('/organs/'+encodeURIComponent(organId)+'?version='+version,{method:'DELETE'});
   }
 
   /**
    * Reset database back to default initial curriculum
    */
   static async resetToDefault(): Promise<Organ[]> {
-    const defaultOrgans: Organ[] = INITIAL_ORGANS.map(o => ({
-      ...o,
-      standard: o.standard || DEFAULT_STANDARD,
-      institution: o.institution || 'Koleksi Mandiri / Terbuka'
-    }));
-
-    await this.saveAllOrgans(defaultOrgans);
-    return defaultOrgans;
+    return api<Organ[]>('/organs/reset',{method:'POST',body:JSON.stringify({confirm:'RESET'})});
   }
 
   /**
-   * Save a binary file (GLB, GLTF, FBX, OBJ, STL, JPG, PNG) directly as a Blob in IndexedDB.
+   * Save a binary file (GLB, GLTF, FBX, OBJ, STL, JPG, PNG) directly as a Blob in server.
    * Also supports associated package files (MTL and texture maps in bundleFiles).
    * Creates and returns a temporary Object URL (blob:...) for instant zero-lag rendering.
    */
@@ -268,162 +122,33 @@ export class AnatomyDatabaseService {
     bundleFiles?: StoredBundleFile[],
     organId?: string
   ): Promise<{ id: string; fileName: string; blobUrl: string; extension: string; sizeBytes: number; bundleFilesCount: number }> {
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    const fileId = `media-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-
-    // Create immediate Blob URL without converting to huge base64 string
-    const blobUrl = URL.createObjectURL(file);
-    blobUrlRegistry.set(fileId, blobUrl);
-
-    const mediaRecord: StoredMediaFile = {
-      id: fileId,
-      fileName,
-      mimeType: file.type || (category === '3d_model' ? (ext === 'fbx' ? 'application/octet-stream' : 'model/gltf-binary') : 'image/jpeg'),
-      extension: ext,
-      category,
-      sizeBytes: file.size,
-      blob: file, // Store binary blob directly in IndexedDB
-      bundleFiles: bundleFiles || [],
-      organId,
-      uploadedBy: uploadedBy || 'Superadmin',
-      institution: institution || 'Koleksi Mandiri / Terbuka',
-      createdAt: new Date().toISOString()
-    };
-
-    try {
-      const db = await openIndexedDB();
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction('media_files', 'readwrite');
-        const store = tx.objectStore('media_files');
-        const request = store.put(mediaRecord);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    } catch (e) {
-      console.warn('Could not store binary in IndexedDB media_files:', e);
-    }
-
-    return {
-      id: fileId,
-      fileName,
-      blobUrl,
-      extension: ext,
-      sizeBytes: file.size,
-      bundleFilesCount: bundleFiles?.length || 0
-    };
+    const result=await api<{id:string;fileName:string;blobUrl:string;extension:string;sizeBytes:number;bundleFilesCount:number}>('/media',{method:'POST',body:JSON.stringify({fileName,category,base64:await blobBase64(file),bundleFiles:await Promise.all((bundleFiles || []).map(async item=>({name:item.name,path:item.path,mimeType:item.mimeType,base64:await blobBase64(item.blob)})))})});return result;
   }
 
   /**
-   * Retrieve the full StoredMediaFile record (Blob, dataUrl, bundleFiles, format) from IndexedDB
+   * Retrieve the full StoredMediaFile record (Blob, dataUrl, bundleFiles, format) from server
    */
   static async getStoredMediaRecord(mediaId: string): Promise<StoredMediaFile | null> {
-    if (!mediaId) return null;
-
-    try {
-      const db = await openIndexedDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction('media_files', 'readonly');
-        const store = tx.objectStore('media_files');
-        const request = store.get(mediaId);
-
-        request.onsuccess = () => {
-          resolve((request.result as StoredMediaFile) || null);
-        };
-        request.onerror = () => resolve(null);
-      });
-    } catch {
-      return null;
-    }
+    if(!mediaId)return null;const data=await api<any>('/media/'+encodeURIComponent(mediaId)+'/record');return {...data,blob:decodeBlob(data.base64,data.mimeType),bundleFiles:(data.bundleFiles || []).map((item:any)=>({...item,blob:decodeBlob(item.base64,item.mimeType)}))};
   }
 
   /**
    * Retrieve a Blob URL from stored media by mediaFileId
    */
   static async getMediaBlobUrl(mediaId: string): Promise<string | null> {
-    if (!mediaId) return null;
-
-    // Return cached URL if valid
-    if (blobUrlRegistry.has(mediaId)) {
-      return blobUrlRegistry.get(mediaId)!;
-    }
-
-    try {
-      const record = await this.getStoredMediaRecord(mediaId);
-      if (record && record.blob) {
-        const url = URL.createObjectURL(record.blob);
-        blobUrlRegistry.set(mediaId, url);
-        return url;
-      } else if (record && record.dataUrl) {
-        return record.dataUrl;
-      }
-      return null;
-    } catch {
-      return null;
-    }
+    return mediaId ? '/api/media/'+encodeURIComponent(mediaId) : null;
   }
 
   /**
-   * Find any stored 3D model in IndexedDB matching the organ
+   * Find any stored 3D model in server matching the organ
    */
   static async findMatchingStored3DRecord(organ: Organ): Promise<StoredMediaFile | null> {
-    try {
-      const db = await openIndexedDB();
-      return new Promise<StoredMediaFile | null>((resolve) => {
-        const tx = db.transaction('media_files', 'readonly');
-        const store = tx.objectStore('media_files');
-        const request = store.getAll();
-
-        request.onsuccess = () => {
-          const all = (request.result as StoredMediaFile[]) || [];
-          const models = all.filter(f => f.category === '3d_model');
-          if (models.length === 0) return resolve(null);
-
-          // 1. Direct organId match
-          if (organ.id) {
-            const byOrganId = models.find(m => m.organId === organ.id);
-            if (byOrganId) return resolve(byOrganId);
-          }
-
-          // 2. Check organ mediaItems
-          if (organ.mediaItems && organ.mediaItems.length > 0) {
-            for (const item of organ.mediaItems) {
-              if (item.mediaFileId) {
-                const byId = models.find(m => m.id === item.mediaFileId);
-                if (byId) return resolve(byId);
-              }
-              if (item.fileName) {
-                const byFileName = models.find(m => m.fileName.toLowerCase() === item.fileName!.toLowerCase());
-                if (byFileName) return resolve(byFileName);
-              }
-            }
-          }
-
-          // 3. Match by extension (e.g. fbx, obj, glb)
-          const targetExt = (organ.model3dFormat || '').toLowerCase();
-          if (targetExt) {
-            const byExt = models.filter(m => m.extension.toLowerCase() === targetExt);
-            if (byExt.length > 0) {
-              return resolve(byExt[byExt.length - 1]); // Most recent
-            }
-          }
-
-          // 4. If this is a custom upload organ, return latest 3D file
-          if (organ.model3dType === 'custom_upload') {
-            return resolve(models[models.length - 1]);
-          }
-
-          resolve(null);
-        };
-        request.onerror = () => resolve(null);
-      });
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   /**
    * Resolves the 3D model source (Binary Blob, ArrayBuffer, BundleFiles, or Source URL) for an organ.
-   * Guarantees persistence across page refreshes by loading real binary Blobs from IndexedDB.
+   * Guarantees persistence across page refreshes by loading real binary Blobs from server.
    */
   static async resolve3DModelData(organ: Organ): Promise<{
     sourceUrl?: string;
@@ -475,7 +200,7 @@ export class AnatomyDatabaseService {
       }
     }
 
-    // 3. Intelligent recovery: Find matching 3D binary record from IndexedDB media_files
+    // 3. Intelligent recovery: Find matching 3D binary record from server media_files
     const recovered = await this.findMatchingStored3DRecord(organ);
     if (recovered && recovered.blob) {
       // Auto-reconnect mediaFileId to avoid future lookup delays
@@ -508,7 +233,7 @@ export class AnatomyDatabaseService {
   }
 
   /**
-   * Resolves the 3D model source URL for an organ (Blob URL, external URL, or IndexedDB binary)
+   * Resolves the 3D model source URL for an organ (Blob URL, external URL, or server binary)
    */
   static async resolve3DModelSource(organ: Organ): Promise<string | null> {
     if (organ.mediaFileId) {
@@ -520,7 +245,7 @@ export class AnatomyDatabaseService {
     const recovered = await this.findMatchingStored3DRecord(organ);
     if (recovered && recovered.blob) {
       const url = URL.createObjectURL(recovered.blob);
-      blobUrlRegistry.set(recovered.id, url);
+
       return url;
     }
 
@@ -532,175 +257,31 @@ export class AnatomyDatabaseService {
   }
 
   /**
-   * Get all registered users from database
-   */
-  /**
-   * Helper: Read backup users from localStorage
-   */
-  private static getLocalStorageUsers(): UserProfile[] {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem(KEY_USERS_LOCAL_STORAGE);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * Helper: Write backup users to localStorage
-   */
-  private static setLocalStorageUsers(users: UserProfile[]): void {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(KEY_USERS_LOCAL_STORAGE, JSON.stringify(users));
-    } catch (err) {
-      console.warn('Failed to backup users to localStorage:', err);
-    }
-  }
-
-  /**
-   * Get all registered users from database (IndexedDB + LocalStorage Dual-Sync)
+   * Get all registered users from database (server Dual-Sync)
    */
   static async getAllUsers(): Promise<UserProfile[]> {
-    const localUsers = this.getLocalStorageUsers();
-
-    try {
-      const db = await openIndexedDB();
-      
-      // If users object store doesn't exist in active schema, fallback gracefully to LocalStorage
-      if (!db.objectStoreNames.contains('users')) {
-        const fallbackList = [...localUsers];
-        if (!fallbackList.some(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id)) {
-          fallbackList.unshift(OFFICIAL_SUPERADMIN);
-        }
-        return fallbackList;
-      }
-
-      const idbUsers = await new Promise<UserProfile[]>((resolve) => {
-        const tx = db.transaction('users', 'readonly');
-        const store = tx.objectStore('users');
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => resolve([]);
-      });
-
-      // Merge IDB users and LocalStorage users by ID / Email to ensure zero data loss
-      const userMap = new Map<string, UserProfile>();
-
-      // Seed Official Admin & Dosen
-      userMap.set(OFFICIAL_SUPERADMIN.id, OFFICIAL_SUPERADMIN);
-      userMap.set(OFFICIAL_DOSEN.id, OFFICIAL_DOSEN);
-
-      // Add local users
-      for (const u of localUsers) {
-        if (u && u.id) userMap.set(u.id, u);
-      }
-
-      // Add & override with IndexedDB users
-      for (const u of idbUsers) {
-        if (u && u.id) userMap.set(u.id, u);
-      }
-
-      const mergedUsers = Array.from(userMap.values());
-
-      // Ensure superadmin has correct password
-      const adminIndex = mergedUsers.findIndex(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
-      if (adminIndex !== -1 && !mergedUsers[adminIndex].password) {
-        mergedUsers[adminIndex].password = DEFAULT_SUPERADMIN_PASSWORD;
-      }
-
-      // Sync back to LocalStorage to keep both stores identical
-      this.setLocalStorageUsers(mergedUsers);
-
-      return mergedUsers;
-    } catch (e) {
-      console.warn('IndexedDB getAllUsers warning, reading from LocalStorage fallback:', e);
-      const fallbackList = [...localUsers];
-      if (!fallbackList.some(u => u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id)) {
-        fallbackList.unshift(OFFICIAL_SUPERADMIN);
-      }
-      return fallbackList;
-    }
+    return api<UserProfile[]>('/users');
   }
 
   /**
    * Get a single user by ID
    */
   static async getUserById(userId: string): Promise<UserProfile | null> {
-    if (userId === OFFICIAL_SUPERADMIN.id) {
-      return OFFICIAL_SUPERADMIN;
-    }
-    const all = await this.getAllUsers();
-    return all.find(u => u.id === userId) || null;
+    return (await this.getAllUsers()).find(user=>user.id===userId) || null;
   }
 
   /**
-   * Register or save user profile in database (Dual-Persistence IndexedDB + LocalStorage)
+   * Register or save user profile in database (Dual-Persistence server)
    */
   static async saveUser(user: UserProfile): Promise<void> {
-    const normalizedUser: UserProfile = {
-      ...user,
-      email: user.email.trim().toLowerCase(),
-      name: user.name.trim(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // 1. Instantly save to LocalStorage (100% reliable synchronous backup)
-    const localUsers = this.getLocalStorageUsers();
-    const existingIndex = localUsers.findIndex(
-      u => u.id === normalizedUser.id || u.email.toLowerCase() === normalizedUser.email.toLowerCase()
-    );
-
-    if (existingIndex >= 0) {
-      localUsers[existingIndex] = { ...localUsers[existingIndex], ...normalizedUser };
-    } else {
-      localUsers.push(normalizedUser);
-    }
-    this.setLocalStorageUsers(localUsers);
-
-    // 2. Persist to IndexedDB
-    try {
-      const db = await openIndexedDB();
-      if (db.objectStoreNames.contains('users')) {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction('users', 'readwrite');
-          const store = tx.objectStore('users');
-          const request = store.put(normalizedUser);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      }
-    } catch (e) {
-      console.error('Failed to save user in IndexedDB, retained in LocalStorage backup:', e);
-    }
+    await api('/users/'+encodeURIComponent(user.id),{method:'PUT',body:JSON.stringify(user)});
   }
 
   /**
    * Reset user password by userId (Superadmin Feature)
    */
   static async resetUserPassword(userId: string, newPassword: string): Promise<boolean> {
-    try {
-      const users = await this.getAllUsers();
-      const targetUser = users.find(u => u.id === userId);
-      if (!targetUser) {
-        return false;
-      }
-
-      const updatedUser: UserProfile = {
-        ...targetUser,
-        password: newPassword.trim(),
-        updatedAt: new Date().toISOString()
-      };
-
-      await this.saveUser(updatedUser);
-      return true;
-    } catch (err) {
-      console.error('Failed to reset user password in database:', err);
-      return false;
-    }
+    const user=await this.getUserById(userId);if(!user) return false;await this.saveUser({...user,password:newPassword});return true;
   }
 
   /**
@@ -710,169 +291,28 @@ export class AnatomyDatabaseService {
     identifierInput: string,
     passwordInput: string
   ): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
-    const cleanId = (identifierInput || '').trim().toLowerCase();
-    const rawPass = passwordInput || '';
-    const cleanPass = rawPass.trim();
-
-    if (!cleanId) {
-      return { success: false, message: 'Silakan masukkan Email, NIP, NIM, atau Nama Pengguna.' };
-    }
-    if (!cleanPass) {
-      return { success: false, message: 'Silakan masukkan kata sandi akun.' };
-    }
-
-    try {
-      const users = await this.getAllUsers();
-
-      // 1. Direct match for Admin / Superadmin master credentials
-      const isMasterSuperadmin = 
-        cleanId === 'admin' ||
-        cleanId === 'superadmin' ||
-        cleanId === OFFICIAL_SUPERADMIN.email.toLowerCase() ||
-        cleanId === 'admin.anatomi@med.id' ||
-        cleanId === 'superadmin.anatomi@med.id' ||
-        cleanId === OFFICIAL_SUPERADMIN.identifierNumber?.toLowerCase() ||
-        cleanId === OFFICIAL_SUPERADMIN.dosenCode?.toLowerCase();
-
-      if (isMasterSuperadmin) {
-        const storedAdmin = users.find(u => u.role === 'ADMIN' || u.role === 'SUPERADMIN' || u.id === OFFICIAL_SUPERADMIN.id);
-        const adminPass = storedAdmin?.password || DEFAULT_ADMIN_PASSWORD;
-
-        if (cleanPass === DEFAULT_ADMIN_PASSWORD || cleanPass === DEFAULT_SUPERADMIN_PASSWORD || cleanPass === adminPass || cleanPass === 'admin123') {
-          const authUser: UserProfile = storedAdmin ? { ...storedAdmin, role: 'ADMIN' } : { ...OFFICIAL_SUPERADMIN, role: 'ADMIN' };
-          return { success: true, user: authUser };
-        } else {
-          return { success: false, message: 'Kata sandi Admin tidak sesuai.' };
-        }
-      }
-
-      // 2. Direct match for Official Dosen
-      const isMasterDosen = 
-        cleanId === 'dosen' ||
-        cleanId === 'dosen-001' ||
-        cleanId === OFFICIAL_DOSEN.email.toLowerCase() ||
-        cleanId === OFFICIAL_DOSEN.identifierNumber?.toLowerCase() ||
-        cleanId === OFFICIAL_DOSEN.dosenCode?.toLowerCase();
-
-      if (isMasterDosen) {
-        const storedDosen = users.find(u => u.role === 'DOSEN' || u.id === OFFICIAL_DOSEN.id);
-        const dosenPass = storedDosen?.password || DEFAULT_DOSEN_PASSWORD;
-
-        if (cleanPass === DEFAULT_DOSEN_PASSWORD || cleanPass === dosenPass || cleanPass === 'dosen123') {
-          const authUser: UserProfile = storedDosen ? { ...storedDosen, role: 'DOSEN' } : OFFICIAL_DOSEN;
-          return { success: true, user: authUser };
-        } else {
-          return { success: false, message: 'Kata sandi Dosen tidak sesuai.' };
-        }
-      }
-
-      // 2. Comprehensive match for all registered users (Dosen, Mahasiswa, Superadmin kustom)
-      const matchedUser = users.find(u => {
-        if (!u) return false;
-        const userEmail = (u.email || '').trim().toLowerCase();
-        const userEmailPrefix = userEmail.split('@')[0];
-        const userIdNum = (u.identifierNumber || '').trim().toLowerCase();
-        const userDosenCode = (u.dosenCode || '').trim().toLowerCase();
-        const userName = (u.name || '').trim().toLowerCase();
-        const userId = (u.id || '').trim().toLowerCase();
-
-        return (
-          userEmail === cleanId ||
-          userEmailPrefix === cleanId ||
-          (userIdNum && userIdNum === cleanId) ||
-          (userDosenCode && userDosenCode === cleanId) ||
-          userName === cleanId ||
-          userId === cleanId
-        );
-      });
-
-      if (!matchedUser) {
-        return { 
-          success: false, 
-          message: `Akun dengan identitas "${identifierInput}" tidak ditemukan dalam basis data. Silakan periksa kembali email atau hubungi Superadmin.` 
-        };
-      }
-
-      // 3. Password Verification
-      const targetPassword = matchedUser.password ? matchedUser.password.trim() : '';
-
-      if (targetPassword) {
-        if (targetPassword === cleanPass || targetPassword === rawPass) {
-          return { success: true, user: matchedUser };
-        } else {
-          return { 
-            success: false, 
-            message: `Kata sandi tidak sesuai untuk akun "${matchedUser.name}". Silakan periksa huruf besar/kecil atau hubungi Superadmin untuk reset kata sandi.` 
-          };
-        }
-      }
-
-      // For accounts initialized without password, set input password and save
-      matchedUser.password = cleanPass;
-      await this.saveUser(matchedUser);
-      return { success: true, user: matchedUser };
-
-    } catch (err) {
-      console.error('Authentication error:', err);
-      return { success: false, message: 'Terjadi kendala sistem saat proses otentikasi akun.' };
-    }
+    try { return await api('/auth/login',{method:'POST',body:JSON.stringify({identifier:identifierInput,password:passwordInput})}); } catch(error) { return {success:false,message:error instanceof Error?error.message:'Masuk gagal.'}; }
   }
 
   /**
-   * Delete a user profile from database (IndexedDB + LocalStorage)
+   * Delete a user profile from database (server)
    */
   static async deleteUser(userId: string): Promise<void> {
-    // 1. Remove from LocalStorage
-    const localUsers = this.getLocalStorageUsers().filter(u => u.id !== userId);
-    this.setLocalStorageUsers(localUsers);
-
-    // 2. Remove from IndexedDB
-    try {
-      const db = await openIndexedDB();
-      if (db.objectStoreNames.contains('users')) {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction('users', 'readwrite');
-          const store = tx.objectStore('users');
-          const request = store.delete(userId);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      }
-    } catch (e) {
-      console.error('Failed to delete user from IndexedDB:', e);
-    }
+    await api('/users/'+encodeURIComponent(userId),{method:'DELETE'});
   }
 
   /**
-   * Batch save/update users (IndexedDB + LocalStorage)
+   * Batch save/update users (server)
    */
   static async bulkSaveUsers(users: UserProfile[]): Promise<void> {
-    // 1. Save to LocalStorage
-    this.setLocalStorageUsers(users);
-
-    // 2. Save to IndexedDB
-    try {
-      const db = await openIndexedDB();
-      if (db.objectStoreNames.contains('users')) {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction('users', 'readwrite');
-          const store = tx.objectStore('users');
-          for (const user of users) {
-            store.put(user);
-          }
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        });
-      }
-    } catch (e) {
-      console.error('Failed to bulk save users in IndexedDB:', e);
-    }
+    for(const user of users) await this.saveUser(user);
   }
 
   /**
    * Resolve all available media objects for an organ (2D images, 3D models, and 3D embeds)
    */
   static resolveOrganMediaItems(organ: Organ): OrganMediaItem[] {
+    if (Array.isArray(organ.mediaItems) && organ.mediaItems.length===0 && !organ.imageUrl && !organ.model3dData && !organ.model3dType && !organ.embed3dUrl) return [];
     if (organ.mediaItems && organ.mediaItems.length > 0) {
       return organ.mediaItems;
     }
@@ -944,7 +384,7 @@ export class AnatomyDatabaseService {
     }> = {};
 
     for (const organ of organs) {
-      const instName = organ.institution?.trim() || 'Koleksi Mandiri / Terbuka';
+      const instName = institutionName(organ.institution);
       
       if (!clusterMap[instName]) {
         clusterMap[instName] = {
@@ -968,7 +408,10 @@ export class AnatomyDatabaseService {
 
     return Object.values(clusterMap).map(c => {
       let shortName = c.name;
-      if (c.name.includes('UNISSULA')) shortName = 'FK UNISSULA';
+      if (c.name==='Universitas Indonesia') shortName='UI';
+      else if(c.name==='Universitas Gadjah Mada') shortName='UGM';
+      else if(c.name==='Institut Teknologi Bandung') shortName='ITB';
+      else if (c.name.includes('UNISSULA')) shortName = 'FK UNISSULA';
       else if (c.name.includes('UI')) shortName = 'FK UI';
       else if (c.name.includes('UGM')) shortName = 'FK UGM';
       else if (c.name.includes('UNAIR')) shortName = 'FK UNAIR';
@@ -1065,10 +508,7 @@ export class AnatomyDatabaseService {
 
     // Insert Users
     sql += `-- Insert Users\n`;
-    const allUsersList = users.length > 0 ? users : [OFFICIAL_SUPERADMIN];
-    if (!allUsersList.some(u => u.role === 'SUPERADMIN')) {
-      allUsersList.unshift(OFFICIAL_SUPERADMIN);
-    }
+    const allUsersList = [...users];
 
     for (const u of allUsersList) {
       const escape = (str: string | undefined) => (str || '').replace(/'/g, "''");

@@ -27,18 +27,25 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  LogOut
+  LogOut,
+  Settings,
+  Copy
 } from 'lucide-react';
 import { Organ, UserProfile, UserRole } from '../types';
-import { AnatomyDatabaseService, OFFICIAL_SUPERADMIN } from '../services/db';
+import { AnatomyDatabaseService, MASTER_ADMIN_ID } from '../services/db';
 import { comparePaaiSystems, comparePaaiSubSystems } from './TreeNavigation';
+import { api } from '../services/api';
+import { canEditOrgan, generalAdmin, institutionName } from '../permissions';
 
 interface SuperadminDashboardProps {
+  routeTab?: string; onNavigateTab?: (tab:string)=>void; settings?: React.ReactNode;
   organs: Organ[];
   onClose: () => void;
   onAddOrgan: () => void;
   onEditOrgan: (organ: Organ) => void;
   onDeleteOrgan: (organId: string) => void;
+  onCopyOrgan: (organ: Organ, institution: string) => Promise<void>;
+  onInstitutionsChanged: () => Promise<void>;
   onResetMasterData: () => void;
   onImportMasterData: (jsonData: Organ[]) => void;
   onLogout?: () => void;
@@ -47,19 +54,23 @@ interface SuperadminDashboardProps {
 }
 
 export default function SuperadminDashboard({
+  routeTab, onNavigateTab, settings,
   organs,
   onClose,
   onAddOrgan,
   onEditOrgan,
   onDeleteOrgan,
+  onCopyOrgan,
+  onInstitutionsChanged,
   onResetMasterData,
   onImportMasterData,
   onLogout,
   currentUser,
   theme
 }: SuperadminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'USERS' | 'ORGANS' | 'SUBCATEGORIES' | 'CLUSTERS' | 'DATA_TOOLS'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'ORGANS' | 'SUBCATEGORIES' | 'CLUSTERS' | 'DATA_TOOLS' | 'SETTINGS'>('ORGANS');
   
+  useEffect(()=>{ const tabs:Record<string,typeof activeTab>={pengguna:'USERS',materi:'ORGANS',kurikulum:'SUBCATEGORIES',institusi:'CLUSTERS',cadangan:'DATA_TOOLS',pengaturan:'SETTINGS'}; const resolved=tabs[routeTab || ''] || routeTab;if(['USERS','ORGANS','SUBCATEGORIES','CLUSTERS','DATA_TOOLS','SETTINGS'].includes(resolved || '')) setActiveTab(resolved as typeof activeTab); },[routeTab]);
   // Organ Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [systemFilter, setSystemFilter] = useState<string>('ALL');
@@ -68,6 +79,7 @@ export default function SuperadminDashboard({
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<string>('ALL');
+  const [userInstitutionFilter, setUserInstitutionFilter] = useState('ALL');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [userSuccessMessage, setUserSuccessMessage] = useState<string | null>(null);
@@ -93,6 +105,60 @@ export default function SuperadminDashboard({
   });
 
   const isDark = theme === 'dark';
+  const globalControl = generalAdmin(currentUser);
+  const ownInstitution = institutionName(currentUser?.institution);
+  const [institutions, setInstitutions] = useState<string[]>([ownInstitution]);
+  const [newInstitution, setNewInstitution] = useState('');
+  const [creatingInstitution, setCreatingInstitution] = useState(false);
+  const [institutionFilter, setInstitutionFilter] = useState('ALL');
+  const [copyInstitution, setCopyInstitution] = useState(ownInstitution);
+  const [copying, setCopying] = useState<string | null>(null);
+  const [renamingInstitution, setRenamingInstitution] = useState<string | null>(null);
+  const [renamedInstitution, setRenamedInstitution] = useState('');
+  const [savingInstitution, setSavingInstitution] = useState(false);
+  const [collectionBusy, setCollectionBusy] = useState(false);
+  const selectStyle = {colorScheme: theme, backgroundColor:isDark?'#0f172a':'#ffffff',color:isDark?'#e2e8f0':'#0f172a'};
+  const copyCollection = async () => {
+    const sources=filteredOrgans.filter(organ=>institutionName(organ.institution)!==copyInstitution);
+    if(!sources.length || collectionBusy) return;
+    setCollectionBusy(true);
+    try {
+      const result=await api<{copied:number;skipped:number}>('/collections/copy',{method:'POST',body:JSON.stringify({institution:copyInstitution,ids:sources.map(organ=>organ.id)})});
+      await onInstitutionsChanged();setUserSuccessMessage(`${result.copied} materi disalin sebagai draf ke ${copyInstitution}. ${result.skipped} salinan yang sudah tersedia dilewati.`);
+    } catch(error) {setUserSuccessMessage((error as Error).message);} finally {setCollectionBusy(false);}
+  };
+  const resetCollection = async () => {
+    const target=globalControl?institutionFilter:ownInstitution;
+    if(target==='ALL'||collectionBusy) return;
+    if(!window.confirm(`Reset koleksi ${target}? Semua media 2D/3D dan notasi pada instansi ini akan dikosongkan. Organ, struktur PAAI, dan akun tetap tersedia. Materi menjadi draf.`)) return;
+    setCollectionBusy(true);
+    try {const result=await api<{reset:number}>('/collections/reset',{method:'POST',body:JSON.stringify({institution:target,confirm:'RESET_MEDIA'})});await onInstitutionsChanged();setUserSuccessMessage(`${result.reset} materi di ${target} dikosongkan. Struktur PAAI tetap tersedia.`);}
+    catch(error) {setUserSuccessMessage((error as Error).message);} finally {setCollectionBusy(false);}
+  };
+  const manageInstitution = async (name: string, action: 'PUT' | 'DELETE') => {
+    if(savingInstitution) return;
+    if(action==='DELETE' && !window.confirm('Hapus cluster '+name+'? Cluster hanya dapat dihapus jika tidak memiliki akun atau organ.')) return;
+    setSavingInstitution(true);
+    try {
+      await api('/institutions/'+encodeURIComponent(name),{method:action,...(action==='PUT'?{body:JSON.stringify({name:renamedInstitution})}:{})});
+      await onInstitutionsChanged(); await refreshInstitutions(); await refreshUsers();
+      setInstitutionFilter('ALL');setUserInstitutionFilter('ALL');setCopyInstitution(ownInstitution);setRenamingInstitution(null);
+      setUserSuccessMessage(action==='PUT'?'Nama instansi, afiliasi akun, dan koleksi berhasil diperbarui.':'Cluster '+name+' berhasil dihapus.');
+    } catch(error) {setUserSuccessMessage((error as Error).message);}
+    finally {setSavingInstitution(false);}
+  };
+  const refreshInstitutions = () => api<string[]>('/institutions').then(setInstitutions).catch(error => setUserSuccessMessage(error.message));
+  useEffect(() => { void refreshInstitutions(); }, []);
+  useEffect(() => {
+    if(!globalControl && ['SUBCATEGORIES','DATA_TOOLS','SETTINGS'].includes(activeTab)) setActiveTab('ORGANS');
+  },[activeTab,globalControl]);
+  const createInstitution = async () => {
+    if(!newInstitution.trim() || creatingInstitution) return;
+    setCreatingInstitution(true);
+    try { const created=await api<{name:string}>('/institutions',{method:'POST',body:JSON.stringify({name:newInstitution})});await refreshInstitutions();setNewInstitution('');setUserSuccessMessage('Instansi '+created.name+' berhasil ditambahkan.'); }
+    catch(error) {setUserSuccessMessage((error as Error).message);}
+    finally {setCreatingInstitution(false);}
+  };
 
   // Load Users from Database
   const refreshUsers = async () => {
@@ -101,7 +167,7 @@ export default function SuperadminDashboard({
       setUsersList(dbUsers);
     } catch (e) {
       console.error('Failed to load users:', e);
-      setUsersList([OFFICIAL_SUPERADMIN]);
+      setUsersList([]); setUserSuccessMessage('Gagal memuat akun dari server.');
     }
   };
 
@@ -120,7 +186,7 @@ export default function SuperadminDashboard({
     
     const matchesSystem = systemFilter === 'ALL' || organ.system === systemFilter;
 
-    return matchesSearch && matchesSystem;
+    return matchesSearch && matchesSystem && (institutionFilter==='ALL' || institutionName(organ.institution)===institutionFilter);
   });
 
   // Filter Users
@@ -135,7 +201,7 @@ export default function SuperadminDashboard({
 
     const matchesRole = userRoleFilter === 'ALL' || user.role === userRoleFilter;
 
-    return matchesSearch && matchesRole;
+    return matchesSearch && matchesRole && (userInstitutionFilter==='ALL' || institutionName(user.institution)===userInstitutionFilter);
   });
 
   // Unique systems sorted strictly by PAAI
@@ -144,8 +210,9 @@ export default function SuperadminDashboard({
   // Statistics
   const totalOrgans = organs.length;
   const total3DModels = organs.filter(o => o.mediaType?.includes('3d') || o.imageUrl?.includes('sketchfab')).length;
-  const uniqueInstitutions = Array.from(new Set(organs.map(o => o.institution || 'Koleksi Mandiri / Terbuka')));
-  const institutionClusters = AnatomyDatabaseService.computeInstitutionClusters(organs);
+  const uniqueInstitutions = institutions;
+  const populatedClusters = AnatomyDatabaseService.computeInstitutionClusters(organs);
+  const institutionClusters = institutions.map(name => populatedClusters.find(cluster=>cluster.name===name) || {id:'institution-'+name,name,shortName:name,organCount:0,threeDCount:0,pinsCount:0,lecturers:[]});
 
   // Handle Save User (Create or Update)
   const handleSaveUserForm = async (e: React.FormEvent) => {
@@ -160,9 +227,9 @@ export default function SuperadminDashboard({
       id: userId,
       name: userForm.name.trim(),
       email: userForm.email.trim().toLowerCase(),
-      password: userForm.password?.trim() ? userForm.password.trim() : (editingUser?.password || 'anatomi2026'),
+      password: userForm.password || undefined,
       role: (userForm.role as UserRole) || 'MAHASISWA',
-      institution: userForm.institution?.trim() || '',
+      institution: ['ADMIN','SUPERADMIN'].includes(userForm.role || '') ? 'General' : globalControl ? institutionName(userForm.institution) : ownInstitution,
       identifierNumber: userForm.identifierNumber?.trim() || '',
       specialization: userForm.specialization?.trim() || '',
       dosenCode: userForm.dosenCode?.trim() || (userForm.role === 'DOSEN' ? `DOSEN-${Date.now().toString().slice(-4)}` : undefined),
@@ -176,12 +243,12 @@ export default function SuperadminDashboard({
       setIsAddingUser(false);
       setEditingUser(null);
       setUserSuccessMessage(
-        `Pengguna "${userToSave.name}" (${userToSave.role}) berhasil disimpan! Gunakan Email: "${userToSave.email}" atau ID: "${userToSave.identifierNumber || userToSave.name}" dengan Kata Sandi: "${userToSave.password}" untuk masuk.`
+        `Pengguna "${userToSave.name}" berhasil disimpan.`
       );
       setTimeout(() => setUserSuccessMessage(null), 8000);
     } catch (err) {
       console.error('Error saving user:', err);
-      alert('Gagal menyimpan pengguna ke basis data.');
+      alert((err as Error).message);
     }
   };
 
@@ -216,8 +283,8 @@ export default function SuperadminDashboard({
       return;
     }
 
-    if (newPassword.trim().length < 4) {
-      setResetError('Kata sandi minimal 4 karakter.');
+    if (newPassword.length < 10) {
+      setResetError('Kata sandi minimal 10 karakter.');
       return;
     }
 
@@ -244,7 +311,7 @@ export default function SuperadminDashboard({
 
   // Handle Delete User
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (userId === OFFICIAL_SUPERADMIN.id) {
+    if (userId === MASTER_ADMIN_ID) {
       alert('Akun Superadmin Utama Sistem tidak dapat dihapus.');
       return;
     }
@@ -263,13 +330,16 @@ export default function SuperadminDashboard({
       setTimeout(() => setUserSuccessMessage(null), 4000);
     } catch (err) {
       console.error('Error deleting user:', err);
-      alert('Gagal menghapus pengguna.');
+      alert((err as Error).message);
     }
   };
 
   // Quick Role Change
   const handleQuickRoleChange = async (user: UserProfile, newRole: UserRole) => {
-    if (user.id === OFFICIAL_SUPERADMIN.id && newRole !== 'SUPERADMIN') {
+    if(newRole==='ADMIN_INSTITUSI' && institutionName(user.institution)==='General') {
+      setEditingUser(user); setUserForm({...user,password:'',role:newRole,institution:institutions.find(name=>name!=='General') || ''});setIsAddingUser(false);return;
+    }
+    if (user.id === MASTER_ADMIN_ID && newRole !== 'SUPERADMIN') {
       alert('Peran Superadmin Utama Sistem tidak dapat diturunkan.');
       return;
     }
@@ -284,7 +354,7 @@ export default function SuperadminDashboard({
       setUserSuccessMessage(`Role ${user.name} diperbarui menjadi ${newRole}.`);
       setTimeout(() => setUserSuccessMessage(null), 3000);
     } catch (err) {
-      console.error('Failed to change role:', err);
+      alert((err as Error).message);
     }
   };
 
@@ -336,8 +406,8 @@ export default function SuperadminDashboard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fade-in" id="superadmin-dashboard-modal">
-      <div className={`relative w-full max-w-5xl h-[90vh] rounded-xl shadow-2xl border overflow-hidden flex flex-col ${
+    <div className="fixed inset-x-0 bottom-0 top-16 z-30 flex items-center justify-center p-0" id="superadmin-dashboard-modal">
+      <div className={`relative w-full max-w-none h-full rounded-none shadow-2xl border overflow-hidden flex flex-col ${
         isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         
@@ -352,14 +422,14 @@ export default function SuperadminDashboard({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold tracking-wide">
-                  Master Data & User Management
+                  Administrasi
                 </h2>
                 <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold">
-                  SUPERADMIN
+                  {currentUser?.role === 'ADMIN_INSTITUSI' ? 'Admin instansi' : currentUser?.role === 'SUPERADMIN' ? 'Superadmin General' : 'Admin General'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
-                Pusat kendali pengguna, hak akses role, master data PAAI, dan cluster institusi.
+                {globalControl ? 'Admin General · Kelola akun, koleksi umum, dan seluruh instansi.' : 'Admin instansi · '+ownInstitution+' · Kelola akun dan koleksi instansi Anda.'}
               </p>
             </div>
           </div>
@@ -410,7 +480,7 @@ export default function SuperadminDashboard({
                 id="superadmin-logout-btn"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Keluar Superadmin</span>
+                <span className="hidden sm:inline">Keluar akun</span>
               </button>
             )}
 
@@ -470,7 +540,7 @@ export default function SuperadminDashboard({
           isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-100/50 border-slate-200'
         }`}>
           <button
-            onClick={() => setActiveTab('USERS')}
+            onClick={() => { setActiveTab('USERS'); onNavigateTab?.('USERS'); }}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'USERS'
                 ? 'border-teal-500 text-teal-400 font-semibold'
@@ -483,7 +553,7 @@ export default function SuperadminDashboard({
           </button>
 
           <button
-            onClick={() => setActiveTab('ORGANS')}
+            onClick={() => { setActiveTab('ORGANS'); onNavigateTab?.('ORGANS'); }}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'ORGANS'
                 ? 'border-teal-500 text-teal-400 font-semibold'
@@ -496,7 +566,7 @@ export default function SuperadminDashboard({
           </button>
 
           <button
-            onClick={() => setActiveTab('CLUSTERS')}
+            onClick={() => { setActiveTab('CLUSTERS'); onNavigateTab?.('CLUSTERS'); }}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'CLUSTERS'
                 ? 'border-teal-500 text-teal-400 font-semibold'
@@ -505,11 +575,11 @@ export default function SuperadminDashboard({
             id="tab-superadmin-clusters"
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>Cluster Institusi ({uniqueInstitutions.length})</span>
+            <span>Cluster Instansi ({uniqueInstitutions.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('SUBCATEGORIES')}
+          {globalControl && <button
+            onClick={() => { setActiveTab('SUBCATEGORIES'); onNavigateTab?.('SUBCATEGORIES'); }}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'SUBCATEGORIES'
                 ? 'border-teal-500 text-teal-400 font-semibold'
@@ -519,10 +589,10 @@ export default function SuperadminDashboard({
           >
             <FolderTree className="w-3.5 h-3.5" />
             <span>Taksonomi PAAI</span>
-          </button>
+          </button>}
 
-          <button
-            onClick={() => setActiveTab('DATA_TOOLS')}
+          {globalControl && <button
+            onClick={() => { setActiveTab('DATA_TOOLS'); onNavigateTab?.('DATA_TOOLS'); }}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'DATA_TOOLS'
                 ? 'border-teal-500 text-teal-400 font-semibold'
@@ -532,11 +602,26 @@ export default function SuperadminDashboard({
           >
             <Database className="w-3.5 h-3.5" />
             <span>Backup & SQL Dump</span>
-          </button>
+          </button>}
+          {globalControl && <button
+            type="button"
+            onClick={() => { setActiveTab('SETTINGS'); onNavigateTab?.('SETTINGS'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+              activeTab === 'SETTINGS'
+                ? 'border-teal-500 text-teal-400 font-semibold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+            id="tab-superadmin-settings"
+            aria-current={activeTab === 'SETTINGS' ? 'page' : undefined}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Pengaturan aplikasi</span>
+          </button>}
         </div>
 
         {/* Tab Content Body */}
         <div className="flex-1 overflow-y-auto p-5">
+          {globalControl && activeTab === 'SETTINGS' && settings}
           
           {/* TAB 1: USERS & ROLE MANAGEMENT */}
           {activeTab === 'USERS' && (
@@ -560,6 +645,9 @@ export default function SuperadminDashboard({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  <select aria-label="Filter instansi pengguna" value={userInstitutionFilter} onChange={event=>setUserInstitutionFilter(event.target.value)} className={`rounded-lg border px-2.5 py-1.5 text-xs ${isDark?'bg-slate-950 border-slate-800':'bg-white border-slate-200'}`}>
+                    <option value="ALL">Semua instansi</option>{institutions.map(name=><option key={name} value={name}>{name}</option>)}
+                  </select>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] text-slate-500">Role:</span>
                     <select
@@ -570,10 +658,10 @@ export default function SuperadminDashboard({
                       }`}
                     >
                       <option value="ALL">Semua Role ({usersList.length})</option>
-                      <option value="SUPERADMIN">SUPERADMIN</option>
+                      <option value="ADMIN_INSTITUSI">Admin instansi</option>{globalControl && <><option value="ADMIN">Admin General</option><option value="SUPERADMIN">Superadmin General</option></>}
                       <option value="DOSEN">DOSEN / KONTRIBUTOR</option>
                       <option value="MAHASISWA">MAHASISWA</option>
-                      <option value="GUEST">GUEST / UMUM</option>
+                      {globalControl && <option value="GUEST">Guest</option>}
                     </select>
                   </div>
 
@@ -665,7 +753,7 @@ export default function SuperadminDashboard({
                                   <select
                                     value={user.role}
                                     onChange={(e) => handleQuickRoleChange(user, e.target.value as UserRole)}
-                                    disabled={user.id === OFFICIAL_SUPERADMIN.id}
+                                    disabled={user.id === MASTER_ADMIN_ID}
                                     className={`text-[10px] py-0.5 px-1 rounded border outline-none cursor-pointer ${
                                       isDark 
                                         ? 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200' 
@@ -675,8 +763,8 @@ export default function SuperadminDashboard({
                                   >
                                     <option value="MAHASISWA">MAHASISWA</option>
                                     <option value="DOSEN">DOSEN</option>
-                                    <option value="SUPERADMIN">SUPERADMIN</option>
-                                    <option value="GUEST">GUEST</option>
+                                    <option value="ADMIN_INSTITUSI">Admin instansi</option>{globalControl && <><option value="ADMIN">Admin General</option><option value="SUPERADMIN">Superadmin General</option></>}
+                                    {globalControl && <option value="GUEST">Guest</option>}
                                   </select>
                                 </div>
                               </td>
@@ -686,7 +774,7 @@ export default function SuperadminDashboard({
                               </td>
 
                               <td className="px-3 py-2.5 text-[11px] text-slate-300 dark:text-slate-300 light:text-slate-700 max-w-[180px] truncate">
-                                {user.institution || 'Kurikulum PAAI / Konsorsium'}
+                                {institutionName(user.institution)}
                               </td>
 
                               <td className="px-3 py-2.5 text-[11px] font-mono">
@@ -724,13 +812,13 @@ export default function SuperadminDashboard({
 
                                   <button
                                     onClick={() => handleDeleteUser(user.id, user.name)}
-                                    disabled={user.id === OFFICIAL_SUPERADMIN.id || (currentUser?.id === user.id)}
+                                    disabled={user.id === MASTER_ADMIN_ID || (currentUser?.id === user.id)}
                                     className={`p-1 rounded transition-colors cursor-pointer ${
-                                      user.id === OFFICIAL_SUPERADMIN.id || (currentUser?.id === user.id)
+                                      user.id === MASTER_ADMIN_ID || (currentUser?.id === user.id)
                                         ? 'text-slate-600 cursor-not-allowed'
                                         : 'text-slate-400 hover:text-rose-400 hover:bg-slate-800'
                                     }`}
-                                    title={user.id === OFFICIAL_SUPERADMIN.id ? 'Superadmin Utama tidak dapat dihapus' : 'Hapus Pengguna'}
+                                    title={user.id === MASTER_ADMIN_ID ? 'Superadmin Utama tidak dapat dihapus' : 'Hapus Pengguna'}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -750,6 +838,13 @@ export default function SuperadminDashboard({
           {/* TAB 2: MASTER ORGANS CRUD */}
           {activeTab === 'ORGANS' && (
             <div className="space-y-4">
+              <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-500/30 p-3 text-xs">
+                <label className="space-y-1"> <span className="block text-slate-400">Koleksi instansi</span><select style={selectStyle} aria-label="Filter instansi materi" value={institutionFilter} onChange={event=>setInstitutionFilter(event.target.value)} className="rounded-lg border border-slate-500/40 p-2"><option value="ALL">Semua koleksi tersedia</option>{institutions.map(name=><option style={selectStyle} key={name} value={name}>{name}</option>)}</select></label>
+                {globalControl ? <label className="space-y-1"><span className="block text-slate-400">Tujuan salinan</span><select style={selectStyle} aria-label="Instansi tujuan salinan" value={copyInstitution} onChange={event=>setCopyInstitution(event.target.value)} className="rounded-lg border border-slate-500/40 p-2">{institutions.map(name=><option style={selectStyle} key={name} value={name}>{name}</option>)}</select></label> : <p className="text-slate-400">Tujuan salinan: {ownInstitution}</p>}
+                <button type="button" disabled={collectionBusy||!filteredOrgans.some(organ=>institutionName(organ.institution)!==copyInstitution)} onClick={()=>void copyCollection()} className="rounded-lg bg-teal-500 px-4 py-2 font-semibold text-slate-950 disabled:opacity-40">{collectionBusy?'Memproses…':'Salin koleksi ke tujuan'}</button>
+                <button type="button" disabled={collectionBusy||(globalControl&&institutionFilter==='ALL')} onClick={()=>void resetCollection()} className="rounded-lg border border-red-500/40 px-4 py-2 text-red-400 disabled:opacity-40">Reset media koleksi</button>
+                <p className="w-full text-slate-400">Salin mengikuti filter daftar dan melewati salinan yang sudah ada. Untuk reset, pilih satu instansi; seluruh media dan notasinya dikosongkan tanpa menghapus struktur PAAI.</p>
+              </div>
               
               {/* Search & Filter Bar */}
               <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
@@ -799,7 +894,7 @@ export default function SuperadminDashboard({
                         <th className="px-3 py-2.5">Sistem & Sub-Sistem PAAI</th>
                         <th className="px-3 py-2.5">Media</th>
                         <th className="px-3 py-2.5">Pin Hotspot</th>
-                        <th className="px-3 py-2.5">Institusi / Dosen</th>
+                        <th className="px-3 py-2.5">Instansi / Kontributor</th>
                         <th className="px-4 py-2.5 text-right">Aksi</th>
                       </tr>
                     </thead>
@@ -844,7 +939,7 @@ export default function SuperadminDashboard({
                                     ? 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30' 
                                     : 'bg-teal-500/15 text-teal-400 border-teal-500/30'
                                 }`}>
-                                  {is3D ? '3D Model' : '2D Image'}
+                                  {!(organ.mediaItems?.length || organ.imageUrl || organ.model3dData || organ.embed3dUrl) ? 'Belum ada media' : is3D ? '3D Model' : '2D Image'}
                                 </span>
                               </td>
 
@@ -854,7 +949,7 @@ export default function SuperadminDashboard({
 
                               <td className="px-3 py-2.5 text-[11px]">
                                 <div className="text-slate-300 dark:text-slate-300 light:text-slate-700 truncate max-w-[150px]">
-                                  {organ.institution || 'Kurikulum PAAI'}
+                                  {institutionName(organ.institution)}
                                 </div>
                                 {organ.dosenCode && (
                                   <div className="text-[10px] text-amber-400 font-mono">
@@ -865,7 +960,9 @@ export default function SuperadminDashboard({
 
                               <td className="px-4 py-2.5 text-right">
                                 <div className="flex items-center justify-end gap-1">
+                                  <button type="button" disabled={copying!==null} onClick={async()=>{setCopying(organ.id);try{await onCopyOrgan(organ,copyInstitution);}finally{setCopying(null);}}} className="p-2 rounded text-teal-400 hover:bg-teal-500/10 disabled:opacity-40" title={'Salin ke '+copyInstitution} aria-label={'Salin '+organ.name+' ke '+copyInstitution}><Copy className="w-3.5 h-3.5" /></button>
                                   <button
+                                    disabled={!canEditOrgan(currentUser || null,organ)}
                                     onClick={() => onEditOrgan(organ)}
                                     className="p-1 rounded text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition-colors cursor-pointer"
                                     title="Edit Organ"
@@ -874,6 +971,7 @@ export default function SuperadminDashboard({
                                   </button>
 
                                   <button
+                                    disabled={!canEditOrgan(currentUser || null,organ)}
                                     onClick={() => {
                                       if (window.confirm(`Hapus organ "${organ.name}" dari basis data?`)) {
                                         onDeleteOrgan(organ.id);
@@ -900,6 +998,9 @@ export default function SuperadminDashboard({
           {/* TAB 3: INSTITUTION CLUSTERS */}
           {activeTab === 'CLUSTERS' && (
             <div className="space-y-4">
+              <div className="rounded-xl border border-slate-500/30 p-4 space-y-3"><h3 className="font-semibold">Cluster Instansi</h3><p className="text-sm text-slate-400">General berisi koleksi umum. Setiap instansi memiliki akun dan koleksi yang dapat disesuaikan sendiri.</p>
+                {globalControl && <div className="flex flex-col sm:flex-row gap-2"><input aria-label="Nama instansi baru" placeholder="Contoh: Universitas Indonesia" className="flex-1 min-w-0 rounded-lg border border-slate-500/40 bg-transparent px-3 py-2 text-sm" value={newInstitution} onChange={event=>setNewInstitution(event.target.value)} /><button type="button" disabled={!newInstitution.trim()||creatingInstitution} onClick={()=>void createInstitution()} className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-40">{creatingInstitution?'Menambahkan…':'Tambah instansi'}</button></div>}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {institutionClusters.map(cluster => (
                   <div
@@ -921,6 +1022,23 @@ export default function SuperadminDashboard({
                         {cluster.organCount} Organ
                       </span>
                     </div>
+                    <p className="text-xs text-slate-400">{usersList.filter(user=>institutionName(user.institution)===cluster.name).length} akun · {usersList.filter(user=>institutionName(user.institution)===cluster.name && user.role==='ADMIN_INSTITUSI').length} admin instansi</p>
+                    {(globalControl || cluster.name===ownInstitution) && <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" className="rounded-lg border border-slate-500/30 px-3 py-2 text-xs" onClick={()=>{setUserInstitutionFilter(cluster.name);setUserRoleFilter('ALL');setUserSearchTerm('');setActiveTab('USERS');onNavigateTab?.('USERS');}}>Kelola akun</button>
+                      <button type="button" className="rounded-lg border border-slate-500/30 px-3 py-2 text-xs" onClick={()=>{setInstitutionFilter(cluster.name);setCopyInstitution(cluster.name);setSearchTerm('');setSystemFilter('ALL');setActiveTab('ORGANS');onNavigateTab?.('ORGANS');}}>Kelola koleksi</button>
+                    </div>}
+                    {(globalControl || cluster.name===ownInstitution) && <button type="button" className="mt-3 rounded-lg border border-teal-500/30 px-3 py-2 text-xs text-teal-400" onClick={()=>{setUserForm({name:'',email:'',role:'MAHASISWA',institution:cluster.name});setEditingUser(null);setIsAddingUser(true);}}>Buat akun di {cluster.name}</button>}
+                    {globalControl && cluster.name!=='General' && <div className="mt-3 border-t border-slate-500/20 pt-3">
+                      {renamingInstitution===cluster.name ? <form className="flex flex-wrap gap-2" onSubmit={event=>{event.preventDefault();void manageInstitution(cluster.name,'PUT');}}>
+                        <input autoFocus aria-label="Nama instansi" maxLength={200} className="min-w-0 flex-1 rounded-lg border border-slate-500/40 bg-transparent px-3 py-2 text-sm" value={renamedInstitution} onChange={event=>setRenamedInstitution(event.target.value)} />
+                        <button disabled={savingInstitution||!renamedInstitution.trim()} className="rounded-lg bg-teal-500 px-3 py-2 text-xs text-slate-950 disabled:opacity-40">Simpan</button>
+                        <button type="button" disabled={savingInstitution} onClick={()=>setRenamingInstitution(null)} className="px-3 py-2 text-xs">Batal</button>
+                      </form> : <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={savingInstitution} onClick={()=>{setRenamingInstitution(cluster.name);setRenamedInstitution(cluster.name);}} className="rounded-lg border border-slate-500/30 px-3 py-2 text-xs">Ubah nama</button>
+                        <button type="button" disabled={savingInstitution||cluster.organCount>0||usersList.some(user=>institutionName(user.institution)===cluster.name)} title="Cluster hanya dapat dihapus setelah akun dan koleksinya kosong" onClick={()=>void manageInstitution(cluster.name,'DELETE')} className="rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-400 disabled:opacity-40">Hapus cluster</button>
+                      </div>}
+                    </div>}
+                    {cluster.name==='General' && <p className="mt-3 text-xs text-slate-500">Cluster utama · nama dan cluster dilindungi.</p>}
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-800/60 dark:border-slate-800/60 light:border-slate-200">
                       <div>
@@ -943,7 +1061,7 @@ export default function SuperadminDashboard({
           )}
 
           {/* TAB 4: PAAI TAXONOMY HIERARCHY OVERVIEW */}
-          {activeTab === 'SUBCATEGORIES' && (
+          {globalControl && activeTab === 'SUBCATEGORIES' && (
             <div className="space-y-3">
               <p className="text-xs text-slate-400">
                 Struktur pohon kurikulum anatomi PAAI disusun secara urut 1 sampai 12 sesuai silabus nasional:
@@ -992,9 +1110,10 @@ export default function SuperadminDashboard({
           )}
 
           {/* TAB 5: BACKUP & DATABASE TOOLS */}
-          {activeTab === 'DATA_TOOLS' && (
+          {globalControl && activeTab === 'DATA_TOOLS' && (
             <div className="space-y-4 max-w-3xl">
               
+              <div className="p-4 border rounded-xl space-y-3"><h3 className="font-semibold">Backup server lengkap</h3><p className="text-sm">Mencakup materi, akun, berkas unggahan, dan pengaturan. Simpan berkas ini di tempat privat.</p><a className="inline-block bg-teal-500 text-slate-950 px-4 py-2 rounded-lg" href="/api/backup" download>Unduh backup SQLite</a></div>
               {/* SQL Backup Card */}
               <div className={`p-4 rounded-xl border ${
                 isDark ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-200'
@@ -1004,11 +1123,11 @@ export default function SuperadminDashboard({
                     <div className="flex items-center gap-2">
                       <FileCode2 className="w-4 h-4 text-teal-400" />
                       <h4 className="text-xs font-bold text-slate-200 dark:text-slate-200 light:text-slate-800">
-                        Ekspor SQLite & MySQL Production Dump (.sql)
+                        Ekspor referensi struktur SQL (.sql)
                       </h4>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Menghasilkan skrip SQL lengkap (tabel <code>users</code>, <code>institutions</code>, <code>organs</code>, <code>media_files</code>) beserta data riil pengguna dan kurikulum.
+                      Referensi struktur untuk integrasi; tidak memuat isi berkas media atau hash akun server. Gunakan backup SQLite untuk cadangan lengkap.
                     </p>
                   </div>
 
@@ -1017,7 +1136,7 @@ export default function SuperadminDashboard({
                     className="px-3 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Unduh .SQL Dump</span>
+                    <span>Unduh referensi SQL</span>
                   </button>
                 </div>
               </div>
@@ -1164,15 +1283,15 @@ export default function SuperadminDashboard({
                   </label>
                   <select
                     value={userForm.role || 'MAHASISWA'}
-                    onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as UserRole }))}
+                    onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as UserRole, institution: ['ADMIN','SUPERADMIN'].includes(e.target.value) ? 'General' : e.target.value==='ADMIN_INSTITUSI' && institutionName(prev.institution)==='General' ? institutions.find(name=>name!=='General') || '' : prev.institution }))}
                     className={`w-full px-3 py-1.5 rounded-lg border text-xs outline-none ${
                       isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500' : 'bg-slate-50 border-slate-200 text-slate-800'
                     }`}
                   >
                     <option value="MAHASISWA">MAHASISWA (Akses Penuh Kurikulum)</option>
                     <option value="DOSEN">DOSEN (Kelola Sub-Kategori & Upload)</option>
-                    <option value="SUPERADMIN">SUPERADMIN (Master Data & User Full Control)</option>
-                    <option value="GUEST">GUEST (Akses Publik Terbatas)</option>
+                    <option value="ADMIN_INSTITUSI">Admin instansi</option>{globalControl && <><option value="ADMIN">Admin General</option><option value="SUPERADMIN">Superadmin General</option></>}
+                    {globalControl && <option value="GUEST">Guest</option>}
                   </select>
                 </div>
               </div>
@@ -1197,15 +1316,9 @@ export default function SuperadminDashboard({
                   <label className="block text-[11px] font-medium text-slate-400 mb-1">
                     Institusi / Universitas
                   </label>
-                  <input
-                    type="text"
-                    value={userForm.institution || ''}
-                    onChange={(e) => setUserForm(prev => ({ ...prev, institution: e.target.value }))}
-                    placeholder="Contoh: FK UI / FK Mandiri / RS Pendidikan"
-                    className={`w-full px-3 py-1.5 rounded-lg border text-xs outline-none ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500' : 'bg-slate-50 border-slate-200 text-slate-800'
-                    }`}
-                  />
+                  <select aria-label="Instansi akun" value={['ADMIN','SUPERADMIN'].includes(userForm.role || '') ? 'General' : globalControl ? institutionName(userForm.institution) : ownInstitution} disabled={!globalControl || ['ADMIN','SUPERADMIN'].includes(userForm.role || '')} onChange={event=>setUserForm(previous=>({...previous,institution:event.target.value}))} className="w-full rounded-lg border border-slate-500/40 bg-transparent px-3 py-2 text-xs">
+{institutions.map(name=><option key={name} value={name}>{name}</option>)}
+</select><p className="mt-1 text-[10px] text-slate-400">Admin General mengelola seluruh instansi. Admin instansi hanya mengelola instansinya.</p>
                 </div>
               </div>
 
@@ -1217,10 +1330,10 @@ export default function SuperadminDashboard({
                   {!editingUser && (
                     <button
                       type="button"
-                      onClick={() => setUserForm(prev => ({ ...prev, password: 'anatomi2026' }))}
+                      onClick={() => setUserForm(prev => ({ ...prev, password: Array.from(crypto.getRandomValues(new Uint8Array(18)),b=>b.toString(16).padStart(2,'0')).join('') }))}
                       className="text-[10px] text-teal-400 hover:text-teal-300 transition-colors cursor-pointer underline"
                     >
-                      Gunakan default: anatomi2026
+                      Buat kata sandi acak
                     </button>
                   )}
                 </div>
@@ -1230,7 +1343,7 @@ export default function SuperadminDashboard({
                     required={!editingUser}
                     value={userForm.password || ''}
                     onChange={(e) => setUserForm(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder={editingUser ? '•••••• (Kosongkan bila tidak ingin mengubah)' : 'Minimal 4 karakter (contoh: anatomi2026)'}
+                    placeholder={editingUser ? '•••••• (Kosongkan bila tidak ingin mengubah)' : 'Minimal 10 karakter'}
                     className={`w-full pl-3 pr-8 py-1.5 rounded-lg border text-xs outline-none ${
                       isDark ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-teal-500' : 'bg-slate-50 border-slate-200 text-slate-800'
                     }`}

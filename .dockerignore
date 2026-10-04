@@ -1,0 +1,8 @@
+node_modules
+dist
+data
+.git
+.env*
+UX_*.jpg
+*_PHASE2.png
+EDITOR_PHASE2.jpg

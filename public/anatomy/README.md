@@ -1,0 +1,19 @@
+# Sumber gambar
+
+Berkas disalin tanpa perubahan dari Wikimedia Commons. Nomor berkas merupakan indeks aset, bukan urutan sistem kurikulum. Manifest lengkap: sources.json. Ilustrasi pengantar tidak menggantikan diagram khusus topik.
+
+- system-6.svg: [File:Digestive system diagram en.svg](https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg), Mariana Ruiz, Jmarchn, [Public domain](https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg).
+- system-3.png: [File:Muscles anterior labeled.png](https://commons.wikimedia.org/wiki/File:Muscles_anterior_labeled.png), Mikael Häggström. When using this image in external works, it may be cited as: Häggström, Mikael (2014). "Medical gallery of Mikael Häggström 2014". WikiJournal of Medicine 1 (2). DOI:10.15347/wjm/2014.008. ISSN 2002-4436. Public Domain. or By Mikael Häggström, used with permission., [Public domain](https://commons.wikimedia.org/wiki/File:Muscles_anterior_labeled.png).
+- system-5.svg: [File:Respiratory system complete en.svg](https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg), LadyofHats, Jmarchn, [Public domain](https://commons.wikimedia.org/wiki/File:Respiratory_system_complete_en.svg).
+- system-14.svg: [File:Ear-anatomy.svg](https://commons.wikimedia.org/wiki/File:Ear-anatomy.svg), Iain, SVG conversion by User:Surachit, [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/).
+- system-7.svg: [File:Urinary system.svg](https://commons.wikimedia.org/wiki/File:Urinary_system.svg), Jordi March i Nogué [1], [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0).
+- system-4.svg: [File:Heart diagram-en.svg](https://commons.wikimedia.org/wiki/File:Heart_diagram-en.svg), ZooFari, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0).
+- system-1.svg: [File:Anatomical Planes-en.svg](https://commons.wikimedia.org/wiki/File:Anatomical_Planes-en.svg), Edoarado, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0).
+- system-8.jpg: [File:Reproductive (male).jpg](https://commons.wikimedia.org/wiki/File:Reproductive_(male).jpg), Unknown Illustrator, [Public domain](https://commons.wikimedia.org/wiki/File:Reproductive_(male).jpg).
+- system-2.jpg: [File:701 Axial Skeleton-01.jpg](https://commons.wikimedia.org/wiki/File:701_Axial_Skeleton-01.jpg), OpenStax College, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0).
+- system-9.jpg: [File:1201 Overview of Nervous System.jpg](https://commons.wikimedia.org/wiki/File:1201_Overview_of_Nervous_System.jpg), OpenStax, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0).
+- system-10.jpg: [File:1413 Structure of the Eye.jpg](https://commons.wikimedia.org/wiki/File:1413_Structure_of_the_Eye.jpg), OpenStax College, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0).
+- system-11.jpg: [File:1801 The Endocrine System.jpg](https://commons.wikimedia.org/wiki/File:1801_The_Endocrine_System.jpg), OpenStax College, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0).
+- system-12.jpg: [File:2201 Anatomy of the Lymphatic System.jpg](https://commons.wikimedia.org/wiki/File:2201_Anatomy_of_the_Lymphatic_System.jpg), OpenStax College, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0).
+- system-15.png: [File:Embryonic Development CNS.png](https://commons.wikimedia.org/wiki/File:Embryonic_Development_CNS.png), Source: Goodlett, C.R., and Horn, K.H. Mechanisms of alcohol–induced damage to the developing nervous system. Alcohol Research Health 25(3):175–184, 2001., [Public domain](https://commons.wikimedia.org/wiki/File:Embryonic_Development_CNS.png).
+- system-13.svg: [File:Basic Female Reproductive System (English).svg](https://commons.wikimedia.org/wiki/File:Basic_Female_Reproductive_System_(English).svg), Source file: LouisBB This file: Svenskbygderna (talk), [Public domain](https://commons.wikimedia.org/wiki/File:Basic_Female_Reproductive_System_(English).svg).

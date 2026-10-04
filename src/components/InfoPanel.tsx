@@ -15,13 +15,20 @@ import {
   FileCheck
 } from 'lucide-react';
 import { Organ, Pin, UserRole } from '../types';
+import { canManageContent } from '../permissions';
 import { AnatomyDatabaseService } from '../services/db';
+import { pinMediaId, pinsForMedia } from '../utils/annotations';
 
 interface InfoPanelProps {
+  appName?: string;
+  appDescription?: string;
   selectedOrgan: Organ | null;
   selectedPin: Pin | null;
   currentRole: UserRole;
   onEditPin?: (pin: Pin) => void;
+  onSelectPin?: (pin: Pin) => void;
+  onRepositionPin?: (pin: Pin) => void;
+  activeMediaId?: string;
   onDeletePin?: (pinId: string) => void;
   onEditOrgan?: (organ: Organ) => void;
   onDeleteOrgan?: (organId: string) => void;
@@ -29,16 +36,18 @@ interface InfoPanelProps {
 }
 
 export default function InfoPanel({ 
+  appName = 'AnatoVerse', appDescription = 'Atlas Anatomi Medis Terbuka',
   selectedOrgan, 
   selectedPin,
   currentRole,
-  onEditPin,
+  onEditPin, onSelectPin, onRepositionPin, activeMediaId,
   onDeletePin,
   onEditOrgan,
   onDeleteOrgan,
   theme
 }: InfoPanelProps) {
   const [activeTab, setActiveTab] = useState<'ORGAN' | 'PIN'>('ORGAN');
+  const [showAllPins, setShowAllPins] = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -65,7 +74,11 @@ export default function InfoPanel({
     );
   }
 
-  const isDosenOrAdmin = currentRole === 'DOSEN' || currentRole === 'SUPERADMIN';
+  const isDosenOrAdmin = canManageContent(currentRole);
+  const media = AnatomyDatabaseService.resolveOrganMediaItems(selectedOrgan);
+  const activeMedia = media.find(item => item.id === activeMediaId) || media.find(item => item.isDefault) || media[0];
+  const visiblePins = pinsForMedia(selectedOrgan.pins || [], media, activeMedia);
+  const listPins = showAllPins ? selectedOrgan.pins || [] : visiblePins;
 
   return (
     <div className={`flex h-full flex-col border-l transition-colors ${
@@ -88,7 +101,7 @@ export default function InfoPanel({
           id="tab-organ-btn"
         >
           <BookOpen className="h-3.5 w-3.5 text-teal-500" />
-          <span>Deskripsi Organ</span>
+          <span>Ringkasan</span>
         </button>
 
         <button
@@ -103,7 +116,7 @@ export default function InfoPanel({
           id="tab-pin-btn"
         >
           <Tag className="h-3.5 w-3.5 text-teal-500" />
-          <span>Pin Aktif</span>
+          <span>Penanda</span>
           {selectedOrgan.pins && selectedOrgan.pins.length > 0 && (
             <span className={`rounded-full px-1.5 py-0.2 text-[9px] font-mono border ${
               isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-200 border-slate-300 text-slate-700'
@@ -219,6 +232,8 @@ export default function InfoPanel({
                 )}
               </div>
 
+              {selectedOrgan.mediaOverview && <p className="text-sm rounded-lg border border-amber-500/30 p-3">{selectedOrgan.mediaOverview}</p>}
+              {selectedOrgan.mediaSource && <p className="text-xs"><a className="text-teal-500 underline" href={selectedOrgan.mediaSource} target="_blank" rel="noreferrer">Sumber gambar</a> · {selectedOrgan.mediaCredit} · {selectedOrgan.mediaLicenseUrl ? <a className="text-teal-500 underline" href={selectedOrgan.mediaLicenseUrl} target="_blank" rel="noreferrer">{selectedOrgan.mediaLicense}</a> : selectedOrgan.mediaLicense}</p>}
               {/* Multi-Media Assets Indicator */}
               <div className={`p-2 rounded-lg border flex items-center justify-between gap-2 text-[10px] ${
                 isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
@@ -306,6 +321,14 @@ export default function InfoPanel({
         ) : (
           /* Tab 2: Hotspot Pin Details */
           <div className="h-full space-y-4" id="info-tab-pin-content">
+            <div className="space-y-3">
+              <div className="flex justify-between gap-2 items-center"><p className="text-sm font-semibold">Notasi · {activeMedia?.title}</p><button className="text-xs text-teal-500 underline" onClick={() => setShowAllPins(value => !value)}>{showAllPins ? 'Media aktif' : 'Semua media'}</button></div>
+              {listPins.length === 0 ? <p className="text-sm text-slate-400">Belum ada notasi pada media ini.{isDosenOrAdmin && ' Aktifkan Tambah notasi lalu klik bagian gambar atau permukaan model.'}</p> : <div className="space-y-2">{listPins.map(pin => {
+                const source = media.find(item => item.id === pinMediaId(pin, media));
+                const number = pinsForMedia(selectedOrgan.pins, media, source).findIndex(item => item.id === pin.id) + 1;
+                return <button key={pin.id} onClick={() => onSelectPin?.(pin)} aria-pressed={selectedPin?.id === pin.id} className={`w-full rounded-xl border p-3 text-left ${selectedPin?.id === pin.id ? 'border-teal-500 bg-teal-500/10' : 'border-slate-500/25'}`}><span className="text-sm font-semibold">{number}. {pin.title}</span><span className="block text-xs text-slate-400 mt-1">{source?.title || 'Media lama'} · {pin.is3d ? '3D' : '2D'}</span></button>;
+              })}</div>}
+            </div>
             {selectedPin ? (
               <div className="space-y-4">
                 
@@ -315,7 +338,7 @@ export default function InfoPanel({
                 }`}>
                   <div className="flex items-center gap-2">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-500 text-slate-950 text-xs font-black shadow-md shrink-0">
-                      {selectedOrgan.pins ? selectedOrgan.pins.findIndex(p => p.id === selectedPin.id) + 1 : 1}
+                      {pinsForMedia(selectedOrgan.pins || [], media, media.find(item => item.id === pinMediaId(selectedPin, media))).findIndex(p => p.id === selectedPin.id) + 1}
                     </div>
                     <div>
                       <h3 className="text-xs sm:text-sm font-bold">
@@ -338,12 +361,13 @@ export default function InfoPanel({
                   )}
                 </div>
 
+                {isDosenOrAdmin && <div className="space-y-2"><p className="text-xs text-slate-400">Seret penanda, atau klik lokasi baru pada media. Tekan Delete untuk menghapus; klik dua kali penanda untuk mengedit.</p><button type="button" className="rounded-lg border border-rose-500/40 px-3 py-2 text-sm text-rose-500" onClick={() => { void Promise.resolve(onDeletePin?.(selectedPin.id)).catch(() => {}); }}>Hapus notasi</button></div>}
                 {/* Hotspot Description */}
                 <div className="space-y-1">
                   <h4 className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
                     Keterangan Struktur Anatomi
                   </h4>
-                  <p className={`text-xs leading-relaxed p-3 rounded-xl border ${
+                  <p className={`text-xs whitespace-pre-wrap leading-relaxed p-3 rounded-xl border ${
                     isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-800'
                   }`}>
                     {selectedPin.description}
@@ -351,17 +375,17 @@ export default function InfoPanel({
                 </div>
 
                 {/* Position Coordinates Reference */}
-                <div className={`rounded-xl p-2.5 border flex items-center justify-between text-[10px] ${
+                {isDosenOrAdmin && <div className={`rounded-xl p-2.5 border flex flex-wrap gap-1 items-center justify-between text-[10px] ${
                   isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
                 }`}>
                   <span className="font-mono">Koordinat Spasial:</span>
                   <span className="font-mono font-bold text-teal-500">
                     {selectedPin.is3d || selectedPin.z !== undefined
-                      ? `X: ${selectedPin.x} | Y: ${selectedPin.y} | Z: ${selectedPin.z ?? 0}`
-                      : `X: ${selectedPin.x}% | Y: ${selectedPin.y}%`
+                      ? `X: ${selectedPin.x.toFixed(3)} | Y: ${selectedPin.y.toFixed(3)} | Z: ${(selectedPin.z ?? 0).toFixed(3)}`
+                      : `X: ${selectedPin.x.toFixed(2)}% | Y: ${selectedPin.y.toFixed(2)}%`
                     }
                   </span>
-                </div>
+                </div>}
 
               </div>
             ) : (
@@ -386,7 +410,7 @@ export default function InfoPanel({
       <div className={`border-t px-4 py-3 text-center text-[10px] font-medium shrink-0 font-mono flex flex-col items-center justify-center gap-0.5 ${
         isDark ? 'bg-slate-950 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-600'
       }`}>
-        <span className="text-teal-500 font-semibold">AnatoVerse • Atlas Anatomi Medis Terbuka</span>
+        <span className="text-teal-500 font-semibold">{appName} • {appDescription}</span>
         <span className="text-[9px] opacity-75">Bebas Digunakan & Dikustomisasi Tiap Institusi</span>
       </div>
 

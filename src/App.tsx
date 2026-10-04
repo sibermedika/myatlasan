@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Lock, 
   Unlock, 
@@ -13,21 +13,28 @@ import {
   Crown,
   Building2
 } from 'lucide-react';
-import { Organ, Pin, UserRole, UserProfile } from './types';
+import { Organ, Pin, UserRole, UserProfile, OrganMediaItem } from './types';
+import { pinMediaId } from './utils/annotations';
 import { INITIAL_ORGANS } from './data';
 import { AnatomyDatabaseService } from './services/db';
-import Navbar from './components/Navbar';
-import TreeNavigation from './components/TreeNavigation';
+import { isAdmin, canManageContent, canEditOrgan } from './permissions';
+import { api } from './services/api';
+import LecturerWorkspace from './components/LecturerWorkspace';
+import BrandingSettings from './components/BrandingSettings';
+import Navbar from './components/AppHeader';
+import Catalog from './components/Catalog';
 import AnatomyCanvas from './components/AnatomyCanvas';
 import InfoPanel from './components/InfoPanel';
 import AddOrganModal from './components/AddOrganModal';
 import AddPinModal from './components/AddPinModal';
-import LoginModal from './components/LoginModal';
+import LoginModal from './components/AccountDialog';
 import SecretAdminModal from './components/SecretAdminModal';
 import SuperadminDashboard from './components/SuperadminDashboard';
 import InstitutionClusterView from './components/InstitutionClusterView';
 import AboutModal from './components/AboutModal';
 import WindowsInstallModal from './components/WindowsInstallModal';
+
+const ADMIN_PATHS: Record<string,string> = {USERS:'pengguna',ORGANS:'materi',SUBCATEGORIES:'kurikulum',CLUSTERS:'institusi',DATA_TOOLS:'cadangan',SETTINGS:'pengaturan'};
 
 export default function App() {
   // 1. Theme state ('dark' | 'light')
@@ -53,86 +60,55 @@ export default function App() {
   };
 
   // 2. Role & User Authentication State
-  const [role, setRole] = useState<UserRole>(() => {
-    const savedRole = localStorage.getItem('anatoverse_user_role');
-    return (savedRole as UserRole) || 'GUEST';
-  });
-
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    const savedUser = localStorage.getItem('anatoverse_user_profile');
-    if (savedUser) {
-      try {
-        return JSON.parse(savedUser);
-      } catch (e) {
-        console.error('Failed to parse user profile', e);
-      }
-    }
-    return null;
-  });
-
-  // 3. Organs list with IndexedDB asynchronous persistence
-  const [organs, setOrgans] = useState<Organ[]>(INITIAL_ORGANS);
-
-  // Initial Database bootstrap from IndexedDB
-  useEffect(() => {
-    async function bootstrapDatabase() {
-      try {
-        const stored = await AnatomyDatabaseService.initDB();
-        if (stored && stored.length > 0) {
-          setOrgans(stored);
-        }
-      } catch (err) {
-        console.warn('Database initialization warning, continuing with in-memory state:', err);
-      }
-    }
-    bootstrapDatabase();
-  }, []);
-
-  const handleLoginSuccess = async (user: UserProfile) => {
-    setCurrentUser(user);
-    setRole(user.role);
-    localStorage.setItem('anatoverse_user_role', user.role);
-    localStorage.setItem('anatoverse_user_profile', JSON.stringify(user));
-    setShowLoginModal(false);
-    setShowSecretAdminModal(false);
-
-    try {
-      await AnatomyDatabaseService.saveUser(user);
-    } catch (e) {
-      console.error('Failed to persist user to database', e);
-    }
-
-    // If currently locked organ was requested, unlock and show it
-    if (lockedOrganAttempt) {
-      setSelectedOrgan(lockedOrganAttempt);
-      setLockedOrganAttempt(null);
-      setShowLockedModal(false);
-    }
+  const [role, setRole] = useState<UserRole>('GUEST');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [organs, setOrgans] = useState<Organ[]>([]);
+  const [branding, setBranding] = useState({name:'AnatoVerse', description:'Atlas anatomi interaktif', logoUrl:''});
+  const [ready, setReady] = useState(false);
+  const [path, setPath] = useState(location.pathname);
+  const navigate = (url: string) => { history.pushState(null,'',url); setPath(url); };
+  useEffect(() => { const pop=()=>setPath(location.pathname); window.addEventListener('popstate',pop); return ()=>window.removeEventListener('popstate',pop); },[]);
+  useEffect(() => { document.title=branding.name; document.querySelector('meta[name=description]')?.setAttribute('content',branding.description); },[branding]);
+  const refresh = async () => {
+    const session = await api<{user: UserProfile | null}>('/auth/me');
+    const collection = await AnatomyDatabaseService.initDB();
+    setCurrentUser(session.user); setRole(session.user?.role || 'GUEST'); setOrgans(collection);
+    setBranding(await api('/settings/branding')); setReady(true);
   };
-
-  const handleLogout = () => {
-    setRole('GUEST');
-    setCurrentUser(null);
-    localStorage.setItem('anatoverse_user_role', 'GUEST');
-    localStorage.removeItem('anatoverse_user_profile');
-    setShowSuperadminDashboard(false);
+  useEffect(() => { refresh().catch(e=>setNotice('Server belum tersambung: '+e.message)); },[]);
+  const handleLoginSuccess = async (user: UserProfile) => {
+    await refresh(); setShowLoginModal(false); setShowSecretAdminModal(false);
+    navigate(canManageContent(user.role) ? (isAdmin(user.role) ? '/admin/materi' : '/kelola') : '/');
+  };
+  const handleLogout = async () => {
+    try { await api('/auth/logout',{method:'POST'}); await refresh(); setSelectedOrgan(null); setEditingViewer(false); navigate('/'); }
+    catch(e) { setNotice((e as Error).message); }
   };
 
   // 4. Selection states
   const [selectedOrgan, setSelectedOrgan] = useState<Organ | null>(null);
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
+  const [activeMedia, setActiveMedia] = useState<OrganMediaItem | null>(null);
+  const [repositionPin, setRepositionPin] = useState<Pin | null>(null);
+  const pinsSaving = useRef(false);
+  const [deletedPins, setDeletedPins] = useState<{ organId: string; pin: Pin; index: number }[]>([]);
+  const selectionRef = useRef({organ:selectedOrgan,pin:selectedPin});
+  selectionRef.current = {organ:selectedOrgan,pin:selectedPin};
 
   // Default to the first available organ on initial load
   useEffect(() => {
-    if (organs.length > 0 && !selectedOrgan) {
+    if (path === '/' && organs.length > 0 && !selectedOrgan) {
       setSelectedOrgan(organs[0]);
     }
-  }, [organs, selectedOrgan]);
+  }, [organs, selectedOrgan, path]);
 
   // 5. Search State
   const [searchQuery, setSearchQuery] = useState('');
 
   // 6. Modal States
+  const [editingViewer, setEditingViewer] = useState(false);
+  const [workspace, setWorkspace] = useState(false);
+  const [notice, setNotice] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSecretAdminModal, setShowSecretAdminModal] = useState(false);
   const [showSuperadminDashboard, setShowSuperadminDashboard] = useState(false);
@@ -142,10 +118,25 @@ export default function App() {
   const [showAddOrganModal, setShowAddOrganModal] = useState(false);
   const [editingOrgan, setEditingOrgan] = useState<Organ | null>(null);
 
+  useEffect(() => {
+    if (!ready) return;
+    const managing=path.startsWith('/admin') || path.startsWith('/kelola');
+    setWorkspace(managing && canManageContent(role));
+    setShowSuperadminDashboard(managing && isAdmin(role));
+    const editorMatch=path.match(/^\/(?:admin|kelola)\/materi\/(new|[^/]+)\/edit$/);
+    if(editorMatch && canManageContent(role)) {
+      const organ=editorMatch[1]==='new' ? null : organs.find(o=>o.id===editorMatch[1]);
+      if(editorMatch[1]==='new' || (organ && canEditOrgan(currentUser,organ))) {setEditingOrgan(organ || null);setShowAddOrganModal(true);}
+    } else setShowAddOrganModal(false);
+    const id=path.startsWith('/atlas/') ? decodeURIComponent(path.slice(7)) : '';
+    if(id) { const found=organs.find(o=>o.id===id); setSelectedOrgan(found || null); if(!found) setNotice('Materi tidak tersedia atau Anda belum memiliki akses.'); }
+  },[path,role,ready,organs]);
+
   // Pin Placing States
-  const [pendingPin2D, setPendingPin2D] = useState<{ x: number; y: number } | null>(null);
-  const [pendingPin3D, setPendingPin3D] = useState<{ x: number; y: number; z: number } | null>(null);
+  const [pendingPin2D, setPendingPin2D] = useState<{ x: number; y: number; mediaId?: string } | null>(null);
+  const [pendingPin3D, setPendingPin3D] = useState<{ x: number; y: number; z: number; mediaId?: string; coordinateSpace?: 'model'; normal?: Pin['normal'] } | null>(null);
   const [editingPin, setEditingPin] = useState<Pin | null>(null);
+  useEffect(() => { setSelectedPin(null); setRepositionPin(null); setPendingPin2D(null); setPendingPin3D(null); setEditingPin(null); }, [selectedOrgan?.id]);
 
   // Locked Content Modal
   const [showLockedModal, setShowLockedModal] = useState(false);
@@ -172,68 +163,37 @@ export default function App() {
       setLockedOrganAttempt(organ);
       setShowLockedModal(true);
     } else {
-      setSelectedOrgan(organ);
+      setSelectedOrgan(organ); navigate(`/atlas/${encodeURIComponent(organ.id)}`);
       setSelectedPin(null);
+      setRepositionPin(null);
     }
   };
 
   // Add or Edit Organ Save Handler (Dosen & Superadmin)
   const handleSaveOrgan = async (organData: Organ) => {
-    const existingIndex = organs.findIndex(o => o.id === organData.id);
-    let updated: Organ[];
-    if (existingIndex >= 0) {
-      updated = [...organs];
-      updated[existingIndex] = organData;
-    } else {
-      updated = [...organs, organData];
-    }
-
-    setOrgans(updated);
-    setSelectedOrgan(organData);
-    setSelectedPin(null);
-    setShowAddOrganModal(false);
-    setEditingOrgan(null);
-
-    try {
-      await AnatomyDatabaseService.saveOrgan(organData);
-    } catch (e) {
-      console.error('Failed to save organ to database', e);
-    }
+    if (!canManageContent(role) || (organData.ownerId && !canEditOrgan(currentUser,organData))) throw new Error('Anda tidak dapat mengedit materi ini.');
+    const saved=await AnatomyDatabaseService.saveOrgan(organData);
+    setOrgans(prev=>prev.some(o=>o.id===saved.id) ? prev.map(o=>o.id===saved.id?saved:o) : [...prev,saved]);
+    setSelectedOrgan(saved); setSelectedPin(null); setShowAddOrganModal(false); setEditingOrgan(null); navigate(isAdmin(role)?'/admin/materi':'/kelola');
+    setNotice('Materi berhasil disimpan di server.');
   };
-
-  // Delete Organ Handler (Superadmin)
   const handleDeleteOrgan = async (organId: string) => {
-    const updated = organs.filter(o => o.id !== organId);
-    setOrgans(updated);
-    if (selectedOrgan?.id === organId) {
-      setSelectedOrgan(updated[0] || null);
-      setSelectedPin(null);
-    }
-
-    try {
-      await AnatomyDatabaseService.deleteOrgan(organId);
-    } catch (e) {
-      console.error('Failed to delete organ from database', e);
-    }
+    const organ=organs.find(o=>o.id===organId);
+    if(!organ || !canEditOrgan(currentUser,organ) || !confirm('Hapus materi ini?')) return;
+    try { await AnatomyDatabaseService.deleteOrgan(organId,organ.version!); setOrgans(prev=>prev.filter(o=>o.id!==organId)); if(selectedOrgan?.id===organId) setSelectedOrgan(null); setNotice('Materi dihapus.'); }
+    catch(e) { setNotice((e as Error).message); }
   };
 
   // Import Master Data (Superadmin)
   const handleImportMasterData = async (imported: Organ[]) => {
-    setOrgans(imported);
-    if (imported.length > 0) {
-      setSelectedOrgan(imported[0]);
-    }
-    setShowSuperadminDashboard(false);
-
-    try {
-      await AnatomyDatabaseService.bulkSaveOrgans(imported);
-    } catch (e) {
-      console.error('Failed to import organs into database', e);
-    }
+    if (!isAdmin(role)) return;
+    try { await AnatomyDatabaseService.bulkSaveOrgans(imported); await refresh(); setNotice('Impor berhasil.'); }
+    catch(e) { setNotice((e as Error).message); }
   };
 
   // Reset Master Data (Superadmin & Navbar)
   const handleResetMasterData = async () => {
+    if (!isAdmin(role) || !confirm('Kembalikan seluruh koleksi di server ke data bawaan? Ekspor backup terlebih dahulu.')) return;
     try {
       const resetOrgans = await AnatomyDatabaseService.resetToDefault();
       setOrgans(resetOrgans);
@@ -243,105 +203,57 @@ export default function App() {
       setShowSuperadminDashboard(false);
     } catch (e) {
       console.error('Failed to reset organs in database', e);
-      setOrgans(INITIAL_ORGANS);
-      setSelectedOrgan(INITIAL_ORGANS[0]);
-      setSelectedPin(null);
+      setNotice((e as Error).message);
     }
   };
 
   // Pin Placement Handler (2D & 3D)
-  const handleSavePin = async (pinData: { title: string; description: string; x: number; y: number; z?: number; is3d?: boolean }) => {
-    if (!selectedOrgan) return;
-
-    if (editingPin) {
-      // Update existing pin
-      const updatedPin: Pin = {
-        ...editingPin,
-        title: pinData.title,
-        description: pinData.description,
-        x: pinData.x,
-        y: pinData.y,
-        z: pinData.z,
-        is3d: pinData.is3d
-      };
-
-      const updatedOrgans = organs.map(org => {
-        if (org.id === selectedOrgan.id) {
-          return {
-            ...org,
-            pins: (org.pins || []).map(p => p.id === editingPin.id ? updatedPin : p)
-          };
-        }
-        return org;
-      });
-
-      setOrgans(updatedOrgans);
-      const refreshed = updatedOrgans.find(o => o.id === selectedOrgan.id) || null;
-      setSelectedOrgan(refreshed);
-      setSelectedPin(updatedPin);
-      setEditingPin(null);
-
-      if (refreshed) {
-        AnatomyDatabaseService.saveOrgan(refreshed);
-      }
-    } else {
-      // Create new pin
-      const newPin: Pin = {
-        id: `pin-${Date.now()}`,
-        title: pinData.title,
-        description: pinData.description,
-        x: pinData.x,
-        y: pinData.y,
-        z: pinData.z,
-        is3d: pinData.is3d
-      };
-
-      const updatedOrgans = organs.map(org => {
-        if (org.id === selectedOrgan.id) {
-          return {
-            ...org,
-            pins: [...(org.pins || []), newPin]
-          };
-        }
-        return org;
-      });
-
-      setOrgans(updatedOrgans);
-      const refreshed = updatedOrgans.find(o => o.id === selectedOrgan.id) || null;
-      setSelectedOrgan(refreshed);
-      setSelectedPin(newPin);
-
-      if (refreshed) {
-        AnatomyDatabaseService.saveOrgan(refreshed);
-      }
-    }
-
-    setPendingPin2D(null);
-    setPendingPin3D(null);
+  const persistPins = async (pins: Pin[]) => {
+    if(!selectedOrgan || !canEditOrgan(currentUser,selectedOrgan)) throw new Error('Anda tidak dapat mengedit notasi materi ini.');
+    if(pinsSaving.current) throw new Error('Notasi sedang disimpan. Tunggu hingga selesai.');
+    pinsSaving.current = true;
+    try {
+      const saved=await AnatomyDatabaseService.saveOrgan({...selectedOrgan,pins});
+      setOrgans(prev=>prev.map(o=>o.id===saved.id?saved:o)); setSelectedOrgan(previous => previous?.id === saved.id ? saved : previous); return saved;
+    } finally { pinsSaving.current = false; }
   };
-
-  // Delete Pin Handler
-  const handleDeletePin = (pinId: string) => {
-    if (!selectedOrgan) return;
-    const updatedOrgans = organs.map(org => {
-      if (org.id === selectedOrgan.id) {
-        return {
-          ...org,
-          pins: (org.pins || []).filter(p => p.id !== pinId)
-        };
-      }
-      return org;
-    });
-
-    setOrgans(updatedOrgans);
-    const refreshed = updatedOrgans.find(o => o.id === selectedOrgan.id) || null;
-    setSelectedOrgan(refreshed);
-    setSelectedPin(null);
-    setEditingPin(null);
-
-    if (refreshed) {
-      AnatomyDatabaseService.saveOrgan(refreshed);
-    }
+  const handleSavePin = async (data: {title:string;description:string;x:number;y:number;z?:number;is3d?:boolean}) => {
+    if(!selectedOrgan) return;
+    const source = editingPin || pendingPin3D || pendingPin2D;
+    const pin: Pin={...editingPin,...data,id:editingPin?.id || 'pin-'+crypto.randomUUID(),mediaId:source?.mediaId || (editingPin ? pinMediaId(editingPin, AnatomyDatabaseService.resolveOrganMediaItems(selectedOrgan)) : activeMedia?.id),coordinateSpace:data.is3d ? (editingPin?.coordinateSpace || pendingPin3D?.coordinateSpace) : undefined,normal:data.is3d ? (editingPin?.normal || pendingPin3D?.normal) : undefined};
+    const pins=editingPin ? (selectedOrgan.pins||[]).map(p=>p.id===pin.id?pin:p) : [...(selectedOrgan.pins||[]),pin];
+    const saved = await persistPins(pins); setSelectedPin(saved.pins.find(p => p.id === pin.id) || pin); setEditingPin(null); setPendingPin2D(null); setPendingPin3D(null);
+  };
+  const placeAnnotation = async (position: { x:number; y:number; z?:number; mediaId?:string; coordinateSpace?:'model'; normal?:Pin['normal'] }, is3d:boolean) => {
+    if(!selectedOrgan || !canEditOrgan(currentUser,selectedOrgan)) return;
+    if(repositionPin) {
+      const changed = { ...repositionPin, ...position, is3d };
+      try { await persistPins(selectedOrgan.pins.map(pin => pin.id === changed.id ? changed : pin)); setSelectedPin(changed); setRepositionPin(null); }
+      catch(error) { setNotice((error as Error).message); }
+    } else if(is3d) setPendingPin3D(position as typeof pendingPin3D);
+    else setPendingPin2D(position);
+  };
+  const handleDeletePin = async (id:string) => {
+    if(!selectedOrgan) return;
+    const index = selectedOrgan.pins.findIndex(pin => pin.id === id); if(index < 0) return;
+    const removed = {organId:selectedOrgan.id,pin:selectedOrgan.pins[index],index};
+    try { await persistPins(selectedOrgan.pins.filter(pin => pin.id !== id)); }
+    catch(error) { setNotice((error as Error).message); throw error; }
+    setDeletedPins(previous => [...previous.slice(-19),removed]);
+    if (selectionRef.current.organ?.id === removed.organId && selectionRef.current.pin?.id === id) { setSelectedPin(null); setEditingPin(null); setRepositionPin(null); }
+  };
+  const handleMovePin = async (pin: Pin, position: Pick<Pin,'x'|'y'|'z'|'normal'|'coordinateSpace'|'mediaId'>) => {
+    if (!selectedOrgan || !selectedOrgan.pins.some(item => item.id === pin.id)) return;
+    const saved = await persistPins(selectedOrgan.pins.map(item => item.id === pin.id ? {...item,...position} : item));
+    if (selectionRef.current.organ?.id === saved.id && selectionRef.current.pin?.id === pin.id) { setSelectedPin(saved.pins.find(item => item.id === pin.id) || null); setRepositionPin(null); }
+  };
+  const undoablePin = [...deletedPins].reverse().find(item => item.organId === selectedOrgan?.id && selectedOrgan && AnatomyDatabaseService.resolveOrganMediaItems(selectedOrgan).some(media => media.id === pinMediaId(item.pin,AnatomyDatabaseService.resolveOrganMediaItems(selectedOrgan))));
+  const handleUndoDelete = async () => {
+    if (!selectedOrgan || !undoablePin) return;
+    const pins = [...selectedOrgan.pins]; pins.splice(Math.min(undoablePin.index,pins.length),0,undoablePin.pin);
+    const saved = await persistPins(pins);
+    setDeletedPins(previous => previous.filter(item => item !== undoablePin));
+    if (selectionRef.current.organ?.id === saved.id) setSelectedPin(saved.pins.find(pin => pin.id === undoablePin.pin.id) || null);
   };
 
   const isDark = theme === 'dark';
@@ -353,43 +265,36 @@ export default function App() {
       
       {/* 1. Header Navigation Bar */}
       <Navbar
+        canEditSelected={!!selectedOrgan && canEditOrgan(currentUser,selectedOrgan)}
+        branding={branding}
         currentRole={role}
         currentUser={currentUser}
         onOpenLoginModal={() => setShowLoginModal(true)}
-        onOpenSuperadminModal={() => setShowSuperadminDashboard(true)}
-        onOpenSecretAdmin={() => setShowSecretAdminModal(true)}
+        onOpenSuperadminModal={() => navigate(isAdmin(role) ? '/admin/materi' : '/kelola')}
+        onOpenSecretAdmin={() => { navigate('/'); setEditingViewer(false); }}
         onOpenClusterModal={() => setShowClusterModal(true)}
         onOpenAboutModal={() => setShowAboutModal(true)}
         onOpenWindowsModal={() => setShowWindowsModal(true)}
         onAddOrgan={() => {
-          setEditingOrgan(null);
-          setShowAddOrganModal(true);
+          navigate(isAdmin(role)?'/admin/materi/new/edit':'/kelola/materi/new/edit');
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onResetData={handleResetMasterData}
+        workspace={workspace} editing={editingViewer} onToggleEditing={() => { setEditingViewer(v => !v); setRepositionPin(null); }}
+        onShowAtlas={() => { navigate('/'); setEditingViewer(false); }}
         onToggleSidebar={() => setShowSidebarMobile(prev => !prev)}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
 
+      {!ready && <div role="alert" className="p-4">Menghubungkan server… <button onClick={()=>refresh().catch(e=>setNotice(e.message))}>Coba lagi</button></div>}
       {/* 2. Primary 3-Column Dashboard Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`${workspace ? "hidden" : "flex"} flex-1 overflow-hidden`}>
         
         {/* Column A: Left Sidebar Tree Navigation (25%) */}
         <aside className="hidden md:block w-64 lg:w-72 shrink-0 h-full">
-          <TreeNavigation
-            organs={filteredOrgans}
-            selectedOrgan={selectedOrgan}
-            onSelectOrgan={handleSelectOrgan}
-            currentRole={role}
-            onAddOrganClick={() => {
-              setEditingOrgan(null);
-              setShowAddOrganModal(true);
-            }}
-            onOpenSuperadmin={(role === 'SUPERADMIN' || role === 'ADMIN') ? () => setShowSuperadminDashboard(true) : undefined}
-            theme={theme}
-          />
+          <Catalog organs={filteredOrgans} selectedOrgan={selectedOrgan} onSelectOrgan={handleSelectOrgan} currentRole={role === 'GUEST' ? 'GUEST' : 'MAHASISWA'} theme={theme} query={searchQuery} onQuery={setSearchQuery} />
         </aside>
 
         {/* Column B: Center Visualizer Stage (50%) */}
@@ -400,17 +305,17 @@ export default function App() {
             selectedOrgan={selectedOrgan}
             selectedPin={selectedPin}
             onSelectPin={setSelectedPin}
-            currentRole={role}
-            onCanvas2DClick={(x, y) => {
-              if (role === 'DOSEN' || role === 'SUPERADMIN') {
-                setPendingPin2D({ x, y });
-              }
-            }}
-            onPinPlaced3D={(coords) => {
-              if (role === 'DOSEN' || role === 'SUPERADMIN') {
-                setPendingPin3D(coords);
-              }
-            }}
+            onActiveMediaChange={setActiveMedia}
+            onMovePin={handleMovePin}
+            onDeletePin={handleDeletePin}
+            onEditPin={setEditingPin}
+            onUndoDelete={handleUndoDelete}
+            canUndoDelete={Boolean(undoablePin)}
+            repositionPin={repositionPin}
+            onCancelReposition={() => setRepositionPin(null)}
+            currentRole={editingViewer && selectedOrgan && canEditOrgan(currentUser,selectedOrgan) ? role : (role === 'GUEST' ? 'GUEST' : 'MAHASISWA')}
+            onCanvas2DClick={(x, y, mediaId) => { void placeAnnotation({x,y,mediaId},false); }}
+            onPinPlaced3D={coords => { void placeAnnotation(coords,true); }}
             onUnlockRequest={() => {
               setLockedOrganAttempt(selectedOrgan);
               setShowLockedModal(true);
@@ -421,15 +326,16 @@ export default function App() {
 
         {/* Column C: Right Sidebar Information Panel (25%) */}
         <aside className="hidden w-72 shrink-0 lg:block xl:w-80 h-full">
-          <InfoPanel
-            selectedOrgan={selectedOrgan}
+          <InfoPanel appName={branding.name} appDescription={branding.description}             selectedOrgan={selectedOrgan}
             selectedPin={selectedPin}
-            currentRole={role}
+            currentRole={editingViewer && selectedOrgan && canEditOrgan(currentUser,selectedOrgan) ? role : (role === 'GUEST' ? 'GUEST' : 'MAHASISWA')}
+            activeMediaId={activeMedia?.id}
+            onSelectPin={setSelectedPin}
+            onRepositionPin={pin => { setSelectedPin(pin); setRepositionPin(pin); }}
             onEditPin={(pin) => setEditingPin(pin)}
             onDeletePin={handleDeletePin}
             onEditOrgan={(organ) => {
-              setEditingOrgan(organ);
-              setShowAddOrganModal(true);
+              navigate((isAdmin(role)?'/admin/materi/':'/kelola/materi/')+organ.id+'/edit');
             }}
             onDeleteOrgan={handleDeleteOrgan}
             theme={theme}
@@ -439,14 +345,16 @@ export default function App() {
       </div>
 
       {/* Mobile Drawer/Overlay for Information Panel on smaller devices */}
-      <div className={`block lg:hidden border-t ${
+      <div className={`${workspace ? "hidden" : "block lg:hidden"} border-t ${
         isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'
       }`}>
         <div className="max-h-60 overflow-y-auto">
-          <InfoPanel
-            selectedOrgan={selectedOrgan}
+          <InfoPanel appName={branding.name} appDescription={branding.description}             selectedOrgan={selectedOrgan}
             selectedPin={selectedPin}
-            currentRole={role}
+            currentRole={editingViewer && selectedOrgan && canEditOrgan(currentUser,selectedOrgan) ? role : (role === 'GUEST' ? 'GUEST' : 'MAHASISWA')}
+            activeMediaId={activeMedia?.id}
+            onSelectPin={setSelectedPin}
+            onRepositionPin={pin => { setSelectedPin(pin); setRepositionPin(pin); }}
             onEditPin={(pin) => setEditingPin(pin)}
             onDeletePin={handleDeletePin}
             onEditOrgan={(organ) => {
@@ -459,6 +367,8 @@ export default function App() {
         </div>
       </div>
 
+      {workspace && role === 'DOSEN' && <LecturerWorkspace user={currentUser} organs={organs} onAdd={()=>navigate('/kelola/materi/new/edit')} onEdit={organ=>navigate('/kelola/materi/'+organ.id+'/edit')} onView={handleSelectOrgan} onDelete={handleDeleteOrgan}/>}
+      {notice && <div role="status" className="fixed bottom-4 left-4 z-[100] bg-slate-800 text-white rounded-xl p-4"><span>{notice}</span><button className="ml-4" onClick={() => setNotice('')}>Tutup</button></div>}
       {/* MODAL: Windows Localhost 3030 Installation Guide */}
       {showWindowsModal && (
         <WindowsInstallModal
@@ -489,19 +399,27 @@ export default function App() {
       )}
 
       {/* MODAL 2: Superadmin Master Data & Cluster Console */}
-      {showSuperadminDashboard && (
+      {workspace && showSuperadminDashboard && isAdmin(role) && (
         <SuperadminDashboard
+          routeTab={path.split('/')[2]} onNavigateTab={tab=>navigate('/admin/'+(ADMIN_PATHS[tab] || 'materi'))}
+          settings={<BrandingSettings branding={branding} onSaved={setBranding} theme={theme}/>}
           organs={organs}
-          onClose={() => setShowSuperadminDashboard(false)}
+          onClose={() => { navigate('/'); setEditingViewer(false); }}
           onAddOrgan={() => {
-            setEditingOrgan(null);
-            setShowAddOrganModal(true);
+            navigate('/admin/materi/new/edit');
           }}
           onEditOrgan={(organ) => {
-            setEditingOrgan(organ);
-            setShowAddOrganModal(true);
+            navigate('/admin/materi/'+organ.id+'/edit');
           }}
           onDeleteOrgan={handleDeleteOrgan}
+          onInstitutionsChanged={refresh}
+          onCopyOrgan={async (organ, institution) => {
+            try {
+              const saved = await api<Organ>('/organs/'+encodeURIComponent(organ.id)+'/copy', {method:'POST',body:JSON.stringify({institution:institution || currentUser?.institution})});
+              setOrgans(previous => [...previous,saved]); navigate('/admin/materi/'+saved.id+'/edit');
+              setNotice('Salinan draf dibuat. Sesuaikan media dan notasi untuk instansi Anda.');
+            } catch(error) { setNotice((error as Error).message); }
+          }}
           onResetMasterData={handleResetMasterData}
           onImportMasterData={handleImportMasterData}
           onLogout={handleLogout}
@@ -525,14 +443,13 @@ export default function App() {
       )}
 
       {/* MODAL 4: Add / Edit Custom Organ (DOSEN & SUPERADMIN) */}
-      {showAddOrganModal && (
+      {showAddOrganModal && canManageContent(role) && (
         <AddOrganModal
+          key={(editingOrgan?.id || 'new')+'-'+(editingOrgan?.version || 0)}
+          onReload={refresh}
           initialOrgan={editingOrgan}
           currentUser={currentUser}
-          onClose={() => {
-            setShowAddOrganModal(false);
-            setEditingOrgan(null);
-          }}
+          onClose={() => { setShowAddOrganModal(false); setEditingOrgan(null); navigate(isAdmin(role)?'/admin/materi':'/kelola'); }}
           onSave={handleSaveOrgan}
           theme={theme}
         />
@@ -546,6 +463,7 @@ export default function App() {
           is3d={false}
           onClose={() => setPendingPin2D(null)}
           onSave={handleSavePin}
+          mediaTitle={activeMedia?.title}
           theme={theme}
         />
       )}
@@ -559,6 +477,7 @@ export default function App() {
           is3d={true}
           onClose={() => setPendingPin3D(null)}
           onSave={handleSavePin}
+          mediaTitle={activeMedia?.title}
           theme={theme}
         />
       )}
@@ -573,6 +492,7 @@ export default function App() {
           initialPin={editingPin}
           onClose={() => setEditingPin(null)}
           onSave={handleSavePin}
+          mediaTitle={activeMedia?.title}
           onDelete={handleDeletePin}
           theme={theme}
         />
@@ -631,7 +551,7 @@ export default function App() {
                 id="modal-open-login-dialog-btn"
               >
                 <Users className="h-4 w-4" />
-                Buka Halaman Login / Pilih Role
+                Masuk akun
               </button>
             </div>
           </div>
@@ -652,31 +572,13 @@ export default function App() {
             <button
               onClick={() => setShowSidebarMobile(false)}
               className="absolute top-3 right-3 z-10 rounded-xl p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-all cursor-pointer active:scale-95"
-              id="close-mobile-sidebar-btn"
+              aria-label="Tutup katalog" id="close-mobile-sidebar-btn"
             >
               <X className="h-4.5 w-4.5" />
             </button>
             
-            <div className="h-full overflow-hidden">
-              <TreeNavigation
-                organs={filteredOrgans}
-                selectedOrgan={selectedOrgan}
-                onSelectOrgan={(organ) => {
-                  handleSelectOrgan(organ);
-                  setShowSidebarMobile(false);
-                }}
-                currentRole={role}
-                onAddOrganClick={() => {
-                  setEditingOrgan(null);
-                  setShowAddOrganModal(true);
-                  setShowSidebarMobile(false);
-                }}
-                onOpenSuperadmin={(role === 'SUPERADMIN' || role === 'ADMIN') ? () => {
-                  setShowSuperadminDashboard(true);
-                  setShowSidebarMobile(false);
-                } : undefined}
-                theme={theme}
-              />
+            <div className="h-full overflow-hidden pt-10">
+              <Catalog organs={filteredOrgans} selectedOrgan={selectedOrgan} onSelectOrgan={(organ) => { handleSelectOrgan(organ); setShowSidebarMobile(false); }} currentRole={role === 'GUEST' ? 'GUEST' : 'MAHASISWA'} theme={theme} query={searchQuery} onQuery={setSearchQuery} />
             </div>
           </div>
         </div>

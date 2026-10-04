@@ -1,7 +1,4 @@
-/**
- * Helper utility for parsing and normalizing 2D and 3D embeds from Sketchfab and Google Drive
- */
-
+/** Convert model pages and copied iframe snippets to embeddable URLs. */
 export interface EmbedInfo {
   originalUrl: string;
   normalizedEmbedUrl: string;
@@ -9,136 +6,47 @@ export interface EmbedInfo {
   mediaCategory: '3d' | '2d' | 'unknown';
   previewTitle: string;
   isValid: boolean;
+  requiresResolution?: boolean;
 }
 
-/**
- * Normalizes user input URL (or iframe snippet) into a clean embeddable iframe URL
- * Supports:
- * 1. Sketchfab (3D Models)
- *    - Direct embed URL: https://sketchfab.com/models/{id}/embed
- *    - Model page URL: https://sketchfab.com/3d-models/human-heart-{id}
- *    - Iframe embed code: <iframe src="https://sketchfab.com/models/{id}/embed"></iframe>
- * 2. Google Drive (2D Images & 3D Previews)
- *    - Sharing link: https://drive.google.com/file/d/{id}/view?usp=sharing
- *    - Open link: https://drive.google.com/open?id={id}
- *    - Direct preview URL: https://drive.google.com/file/d/{id}/preview
- */
 export function normalizeEmbedUrl(rawInput: string): EmbedInfo {
-  if (!rawInput || typeof rawInput !== 'string') {
-    return {
-      originalUrl: '',
-      normalizedEmbedUrl: '',
-      sourceType: 'generic',
-      mediaCategory: 'unknown',
-      previewTitle: '',
-      isValid: false
-    };
-  }
-
+  const result: EmbedInfo = { originalUrl: rawInput || '', normalizedEmbedUrl: '', sourceType: 'generic', mediaCategory: 'unknown', previewTitle: 'Gunakan URL HTTPS atau kode iframe yang valid.', isValid: false };
+  if (typeof rawInput !== 'string' || !rawInput.trim()) return result;
   let clean = rawInput.trim();
-
-  // If user pasted an entire <iframe> code snippet, extract the src attribute
-  if (clean.includes('<iframe') && clean.includes('src=')) {
-    const srcMatch = clean.match(/src=["']([^"']+)["']/i);
-    if (srcMatch && srcMatch[1]) {
-      clean = srcMatch[1];
-    }
+  if (/<iframe\b/i.test(clean)) {
+    const tag = clean.match(/<iframe\b[^>]*>/i)?.[0];
+    const src = tag?.match(/\ssrc\s*=\s*(["'])(.*?)\1/i)?.[2];
+    if (!src) return result;
+    clean = src;
   }
-
-  // 1. Check Sketchfab
-  if (clean.includes('sketchfab.com')) {
-    // Check if it's already an embed URL
-    if (clean.includes('/models/') && clean.includes('/embed')) {
-      return {
-        originalUrl: rawInput,
-        normalizedEmbedUrl: clean,
-        sourceType: 'sketchfab',
-        mediaCategory: '3d',
-        previewTitle: 'Sketchfab 3D Embed',
-        isValid: true
-      };
-    }
-
-    // Extract Sketchfab model ID from standard URL pattern
-    // e.g. https://sketchfab.com/3d-models/human-heart-anatomy-e5d79634e2c943be8dc79581977f6b9a
-    // or https://sketchfab.com/models/e5d79634e2c943be8dc79581977f6b9a
-    const idMatches = clean.match(/[0-9a-fA-F]{32}/);
-    if (idMatches && idMatches[0]) {
-      const modelId = idMatches[0];
-      const embedUrl = `https://sketchfab.com/models/${modelId}/embed?autostart=1&preload=1&camera=0&ui_controls=1&ui_infos=0&ui_watermark=0`;
-      return {
-        originalUrl: rawInput,
-        normalizedEmbedUrl: embedUrl,
-        sourceType: 'sketchfab',
-        mediaCategory: '3d',
-        previewTitle: `Sketchfab 3D (${modelId.slice(0, 8)}...)`,
-        isValid: true
-      };
-    }
-
-    return {
-      originalUrl: rawInput,
-      normalizedEmbedUrl: clean,
-      sourceType: 'sketchfab',
-      mediaCategory: '3d',
-      previewTitle: 'Sketchfab 3D Model',
-      isValid: true
-    };
+  clean = clean.replace(/&amp;/gi, '&').replace(/&#(?:0*38|x0*26);/gi, '&');
+  if (clean.startsWith('//')) clean = 'https:' + clean;
+  let url: URL;
+  try { url = new URL(clean); } catch { return result; }
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return result;
+  result.normalizedEmbedUrl = url.href;
+  const host = url.hostname.toLowerCase();
+  if (['sketchfab.com', 'www.sketchfab.com', 'skfb.ly'].includes(host)) {
+    result.sourceType = 'sketchfab'; result.mediaCategory = '3d';
+    url.protocol = 'https:';
+    if (url.port && url.port !== '443') return result;
+    url.port = '';
+    const short = host === 'skfb.ly' ? /^\/[a-zA-Z0-9]{4,16}\/?$/.test(url.pathname) : /^\/s\/[a-zA-Z0-9]{4,16}\/?$/.test(url.pathname);
+    if (short) return { ...result, normalizedEmbedUrl: url.href, isValid: true, requiresResolution: true, previewTitle: 'Link pendek Sketchfab — akan dikonversi ke viewer.' };
+    const id = url.pathname.match(/^\/models\/([a-f0-9]{32}|[a-zA-Z0-9]{22})(?:\/embed)?\/?$/i)?.[1]
+      || url.pathname.match(/^\/3d-models\/(?:[\w-]+-)?([a-f0-9]{32})\/?$/i)?.[1];
+    if (!id) return { ...result, previewTitle: 'Tautan Sketchfab harus menuju sebuah model, bukan profil atau koleksi.' };
+    url.hostname = 'sketchfab.com'; url.pathname = `/models/${id}/embed`; url.hash = '';
+    if (!url.searchParams.has('autostart')) url.searchParams.set('autostart', '1');
+    if (!url.searchParams.has('preload')) url.searchParams.set('preload', '1');
+    return { ...result, normalizedEmbedUrl: url.href, isValid: true, previewTitle: 'Sketchfab 3D Embed' };
   }
-
-  // 2. Check Google Drive
-  if (clean.includes('drive.google.com')) {
-    // Pattern 1: https://drive.google.com/file/d/{FILE_ID}/view...
-    const fileIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileIdMatch && fileIdMatch[1]) {
-      const fileId = fileIdMatch[1];
-      const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-      return {
-        originalUrl: rawInput,
-        normalizedEmbedUrl: previewUrl,
-        sourceType: 'google_drive',
-        mediaCategory: '2d', // Can preview 2D image or 3D/video
-        previewTitle: `Google Drive Preview (${fileId.slice(0, 8)}...)`,
-        isValid: true
-      };
-    }
-
-    // Pattern 2: https://drive.google.com/open?id={FILE_ID} or ?id={FILE_ID}
-    const idParamMatch = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (idParamMatch && idParamMatch[1]) {
-      const fileId = idParamMatch[1];
-      const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-      return {
-        originalUrl: rawInput,
-        normalizedEmbedUrl: previewUrl,
-        sourceType: 'google_drive',
-        mediaCategory: '2d',
-        previewTitle: `Google Drive Preview (${fileId.slice(0, 8)}...)`,
-        isValid: true
-      };
-    }
-
-    // Already preview format: /preview
-    if (clean.includes('/preview')) {
-      return {
-        originalUrl: rawInput,
-        normalizedEmbedUrl: clean,
-        sourceType: 'google_drive',
-        mediaCategory: '2d',
-        previewTitle: 'Google Drive Embed Preview',
-        isValid: true
-      };
-    }
+  if (host === 'drive.google.com') {
+    result.sourceType = 'google_drive'; result.mediaCategory = '2d';
+    const id = url.pathname.match(/^\/file\/d\/([\w-]+)(?:\/(?:view|preview))?\/?$/)?.[1] || url.searchParams.get('id');
+    if (!id || !/^[\w-]+$/.test(id)) return { ...result, previewTitle: 'Gunakan tautan berbagi berkas Google Drive.' };
+    url.protocol = 'https:'; url.pathname = `/file/d/${id}/preview`; url.searchParams.delete('id'); url.searchParams.delete('usp'); url.hash = '';
+    return { ...result, normalizedEmbedUrl: url.href, isValid: true, previewTitle: 'Google Drive Embed Preview' };
   }
-
-  // Generic or other standard iframe URLs
-  const isValidUrl = clean.startsWith('http://') || clean.startsWith('https://');
-  return {
-    originalUrl: rawInput,
-    normalizedEmbedUrl: clean,
-    sourceType: 'generic',
-    mediaCategory: 'unknown',
-    previewTitle: isValidUrl ? 'Eksternal Embed Iframe' : 'Format URL Tidak Dikenali',
-    isValid: isValidUrl
-  };
+  return { ...result, isValid: url.protocol === 'https:', previewTitle: url.protocol === 'https:' ? 'Embed HTTPS eksternal' : 'Gunakan HTTPS untuk embed.' };
 }

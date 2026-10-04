@@ -6,6 +6,9 @@ export interface Pin {
   y: number; // 2D % (0-100) or 3D y-coordinate
   z?: number; // 3D z-coordinate
   is3d?: boolean;
+  mediaId?: string; // The annotation belongs to this media, rather than every view.
+  coordinateSpace?: 'model'; // 3D anchor in the normalized model's local space.
+  normal?: { x: number; y: number; z: number }; // Outward direction at the 3D surface anchor.
   authorCode?: string;
   institution?: string;
 }
@@ -30,6 +33,15 @@ export interface OrganMediaItem {
 }
 
 export interface Organ {
+  sourceOrganId?: string;
+  ownerId?: string;
+  version?: number;
+  status?: 'draft' | 'published';
+  mediaSource?: string;
+  mediaLicense?: string;
+  mediaLicenseUrl?: string;
+  mediaCredit?: string;
+  mediaOverview?: string;
   id: string;
   name: string;
   latinName: string;
@@ -59,7 +71,7 @@ export interface Organ {
 }
 
 // Role hak akses pengguna: Admin (Master Data) & Dosen (Konten 3D)
-export type UserRole = 'ADMIN' | 'DOSEN' | 'SUPERADMIN' | 'MAHASISWA' | 'GUEST';
+export type UserRole = 'ADMIN' | 'ADMIN_INSTITUSI' | 'DOSEN' | 'SUPERADMIN' | 'MAHASISWA' | 'GUEST';
 
 export interface UserProfile {
   id: string;

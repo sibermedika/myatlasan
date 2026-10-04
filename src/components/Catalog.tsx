@@ -1,0 +1,7 @@
+import React from 'react';
+import TreeNavigation from './TreeNavigation';
+import { Organ, UserRole } from '../types';
+interface Props { organs: Organ[]; selectedOrgan: Organ | null; onSelectOrgan: (o: Organ)=>void; currentRole: UserRole; theme: 'dark'|'light'; query: string; onQuery: (s:string)=>void; }
+export default function Catalog(p: Props) {
+  return <div className="h-full flex flex-col"><div className="p-3 md:hidden"><label className="sr-only" htmlFor="catalog-search">Cari anatomi</label><input id="catalog-search" value={p.query} onChange={e=>p.onQuery(e.target.value)} placeholder="Cari anatomi…" className="w-full border border-slate-500/30 bg-transparent rounded-lg p-3 text-sm"/></div>{p.query.trim() ? <div className="flex-1 overflow-auto p-3"><h2 className="text-sm font-semibold mb-3">{p.organs.length} hasil pencarian</h2>{!p.organs.length && <p className="text-sm text-slate-400">Tidak ada materi yang cocok. Coba nama organ atau istilah Latin lainnya.</p>}{p.organs.map(o=><button key={o.id} onClick={()=>p.onSelectOrgan(o)} className={`block w-full text-left rounded-xl p-3 mb-2 border ${p.selectedOrgan?.id===o.id ? 'border-teal-500 bg-teal-500/10' : 'border-slate-500/20'}`}><span className="block font-medium text-sm">{o.name}</span><span className="block text-xs text-slate-400 mt-1">{o.latinName}</span><span className="block text-xs text-slate-400 mt-1">{o.subSystem}</span></button>)}</div> : <div className="flex-1 min-h-0"><TreeNavigation {...p} onAddOrganClick={()=>{}} /></div>}</div>;
+}

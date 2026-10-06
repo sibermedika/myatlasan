@@ -11,7 +11,7 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md animate-fade-in" id="about-info-modal">
-      <div className={`relative w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden flex flex-col ${
+      <div className={`relative w-full max-w-lg max-h-[calc(100dvh-2rem)] rounded-2xl shadow-2xl border overflow-hidden flex flex-col ${
         isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         
@@ -41,7 +41,7 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4 text-xs leading-relaxed">
+        <div className="p-6 space-y-4 text-xs leading-relaxed overflow-y-auto min-h-0">
           
           {/* Main Credit Highlight */}
           <div className={`p-4 rounded-xl border flex items-center gap-3.5 ${
@@ -62,6 +62,32 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
               </p>
             </div>
           </div>
+
+          <section aria-label="Deskripsi aplikasi" className={`space-y-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <h5 className="font-bold text-sm">Belajar anatomi secara visual dan interaktif</h5>
+            <p>
+              AnatoVerse adalah atlas anatomi digital yang membantu mahasiswa, dosen, dan tenaga kesehatan mempelajari struktur tubuh manusia melalui gambar 2D dan model 3D interaktif. Pengguna dapat menjelajahi materi berdasarkan sistem tubuh serta memilih penanda anatomi untuk melihat nama dan penjelasan struktur yang dipelajari.
+            </p>
+            <p>
+              Dosen dapat menyusun materi, mengunggah media, dan menambahkan penanda beserta keterangannya. Dukungan pengelolaan akun dan institusi membantu setiap fakultas kedokteran atau institusi kesehatan menyesuaikan koleksi materi dengan kebutuhan pembelajaran mereka.
+            </p>
+          </section>
+
+          <section aria-label="Kredit pengembang" className={`p-4 rounded-xl border space-y-3 ${
+            isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <p>Developed by: <strong>CortexImagiNusa</strong></p>
+            <div>
+              <h5 className="font-bold mb-1">Team:</h5>
+              <ul className="space-y-1">
+                <li>dr. Penggalih Mahardika Herlambang, M.Kom</li>
+                <li>dr. Nanang Wiyono, M.Kes</li>
+                <li>dr. Hendry Gunawan, Sp.N</li>
+                <li>Muhammad Junaedi, S.Kom</li>
+              </ul>
+            </div>
+            <p>Email: <a href="mailto:corteximaginusa@gmail.com" className={`break-all underline underline-offset-2 ${isDark ? 'text-teal-300 hover:text-teal-200' : 'text-teal-700 hover:text-teal-800'}`}>corteximaginusa@gmail.com</a></p>
+          </section>
 
           <div className="space-y-2">
             <h5 className="font-bold text-xs uppercase tracking-wider text-slate-400 font-mono">
@@ -86,7 +112,7 @@ export default function AboutModal({ onClose, theme }: AboutModalProps) {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span><strong>Penyimpanan Ringan Tanpa Beban Server:</strong> Menggunakan penyimpanan IndexedDB lokal di peramban yang instan, cepat, dan siap dijalankan di localhost port 3030 Windows.</span>
+                <span><strong>Pengelolaan Materi Terpusat:</strong> Materi dan perubahan disimpan di server agar koleksi dapat dikelola bersama sesuai hak akses pengguna.</span>
               </li>
             </ul>
           </div>

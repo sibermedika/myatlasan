@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Search, Menu, Sun, Moon, LogIn, BookOpen, Settings } from 'lucide-react';
+import { Activity, Search, Menu, Sun, Moon, LogIn, BookOpen, Settings, Info } from 'lucide-react';
 import { UserRole, UserProfile } from '../types';
 import { canManageContent } from '../permissions';
 interface Props {
@@ -26,6 +26,7 @@ export default function AppHeader(p: Props) {
       {p.workspace ? <button onClick={p.onShowAtlas} className="flex items-center gap-2 p-2 text-sm"><BookOpen size={18}/><span className="hidden sm:inline">Lihat Atlas</span></button> : canManageContent(p.currentRole) ? <button aria-label="Buka ruang kelola" onClick={p.onOpenSuperadminModal} className="flex items-center gap-2 p-2 text-sm"><Settings size={18}/><span className="hidden sm:inline">Kelola</span></button> : null}
       {!p.workspace && <button onClick={p.onOpenClusterModal} className="hidden lg:block text-sm p-2">Koleksi institusi</button>}
       <button onClick={p.onToggleTheme} className="p-3 rounded-lg" aria-label={dark ? 'Gunakan tema terang' : 'Gunakan tema gelap'}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
+      <button id="navbar-about-btn" aria-label="Tentang aplikasi dan kredit" title="Tentang aplikasi dan kredit" onClick={p.onOpenAboutModal} className={`p-3 rounded-lg transition-colors ${dark ? 'hover:bg-slate-800 hover:text-teal-300' : 'hover:bg-slate-100 hover:text-teal-700'}`}><Info size={18}/></button>
       <button id="navbar-auth-btn" aria-label={p.currentUser ? 'Menu akun' : 'Masuk akun'} onClick={p.onOpenLoginModal} className="flex items-center gap-2 rounded-xl border border-slate-500/30 px-3 py-2.5 text-sm"><LogIn size={18}/><span className="hidden sm:block max-w-32 truncate">{p.currentUser?.name || 'Masuk'}</span></button>
     </nav>
   </header>;
